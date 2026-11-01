@@ -1,0 +1,184 @@
+BRAWL WARS - AUTOMATED LOCAL SOURCE AUDIT
+Generated: 2026-11-01T14:51:04.261Z
+Project: brawl-wars-browser-fighter 0.8.0-beta.1
+Root: C:\Users\piyush\Downloads\PiyuProjects\BRAWLVERSE
+Platform: win32 10.0.26300 | Node v26.13.0 | npm 11.20.0
+
+IMPORTANT: This is a read-only audit. Game source files are not modified.
+The only file written by this script is BRAWL_WARS_AUTO_AUDIT.txt.
+This script checks source patterns, tests, and JavaScript syntax. It cannot see the rendered browser UI or prove real multiplayer security.
+
+1. AUTOMATED TESTS
+Command: npm test
+Exit code: 0
+Output tail:
+  ✔ timeout compares remaining health and supports a draw (1.2054ms)
+  ✔ simultaneous knockout is a draw and cannot double-complete (0.1846ms)
+  ✔ rejects invalid match configuration and winner values (0.5447ms)
+  ✔ training mode has independent setup and does not finish rounds on knockout (1.1114ms)
+  ✔ training dummy supports stationary, guard and attack-back behavior (0.2839ms)
+  ✔ training lab exposes health and energy toggles, stats, and reset controls (0.3051ms)
+  (node:14864) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+  (Use `node --trace-warnings ...` to show where the warning was created)
+  ✔ AudioManager handles headless runtime and volume clamping safely (1.8769ms)
+  ✔ Arcade full ladder run simulation completes with victory bonus (0.8679ms)
+  ✔ Arcade run halts immediately on defeat without advancing (0.224ms)
+  ✔ RoundManager handles consecutive matches and score resets correctly (0.4447ms)
+  ✔ Custom fighter appearance bounds clamping and normalization (0.5677ms)
+  ✔ Multiplayer sanitization rejects malformed payloads and malicious input (0.9855ms)
+  ✔ 25 continuous match simulations complete without state corruption (0.345ms)
+  ✔ InputController state isolation and touch reset cleanliness (0.1736ms)
+  ✔ Progression level calculations and unlock thresholds (0.3512ms)
+  ✔ Stage definitions and roster integrity across all playable modes (1.7281ms)
+  ✔ player names remove control characters and enforce length (1.0939ms)
+  ✔ fighter IDs are allow-listed (0.1695ms)
+  ✔ room codes require six hexadecimal characters (0.2148ms)
+  ✔ input payloads accept only known boolean-true controls (0.8179ms)
+  ✔ online sanitizer preserves only strict boolean movement, dash and combat inputs (0.1767ms)
+  ✔ authoritative match rejects replayed input and computes hit damage on server state (2.3812ms)
+  ✔ Brawl Wars startup screen and recoverable error UI are present (7.03ms)
+  ✔ room server requires configured production origins and exposes a health endpoint (0.6122ms)
+  ✔ FightScene creates pause controls before its first HUD layout (5.4886ms)
+  ✔ fighter selection reserves separate roster, details and action regions (1.2274ms)
+  ✔ creator preview frames model bounds on resize and appearance changes (0.8797ms)
+  ✔ creator modal uses a single scroll container and disposes its preview on close (2.449ms)
+  ℹ tests 96
+  ℹ suites 0
+  ℹ pass 96
+  ℹ fail 0
+  ℹ cancelled 0
+  ℹ skipped 0
+  ℹ todo 0
+  ℹ duration_ms 410.302
+
+2. JAVASCRIPT SYNTAX CHECKS
+JavaScript files checked: 45
+Syntax failures: 0
+Result: all discovered JavaScript files passed node --check.
+
+3. PRODUCTION BUILD CHECK
+NOT RUN: Vite is not installed in node_modules or no build script exists.
+Run npm install, then run npm run build.
+
+4. TARGETED SOURCE-LEVEL BUG CHECKS
+Targeted checks: 15
+
+BW-001 | P0 | NOT DETECTED
+Fight scene pause button initialization order
+Evidence: FightScene.js createHud at 83; createPauseButton at 82; layoutHud touches pauseButton=true
+Impact: If confirmed, first HUD layout calls setPosition before pauseButton is created. This can crash when entering a fight.
+Recommended fix: Create the pause button before the first layoutHud call, or perform the initial layout after both HUD and buttons exist.
+
+BW-002 | P1 | NOT DETECTED
+Online room code input length
+Evidence: index.html maxlength=6; server creates six hex characters and validates six
+Impact: A joiner cannot type the complete room code if the input maxlength is shorter than the server code.
+Recommended fix: Set the input maxlength and placeholder to six characters. Validate and uppercase the value on input.
+
+BW-003 | P1 | NOT DETECTED
+Online mode flag passed into FightScene
+Evidence: SelectScene room:start payload: online:true,mode:'online',slot:onlineRoom.slot,players:data.players,stageId:data.stageId
+Impact: If mode is omitted and FightScene defaults to arcade, online matches can be classified as arcade for results/rewards.
+Recommended fix: Pass mode: "online" explicitly and ensure match rewards and history distinguish online matches.
+
+BW-004 | P1 | NOT DETECTED
+Online remote fighter model registry ID mismatch
+Evidence: FightScene uses online remote ID=true; registers CPU model key=false; ThreeStage looks up fighter.id=true
+Impact: If keys differ, the render loop cannot find the opponent model for the online fighter.
+Recommended fix: Use one consistent fighter ID for the online Fighter object, ThreeStage.addFighter, and render/update registry.
+
+BW-005 | P1 | NOT DETECTED
+Online dash fields filtered by server input allow-list
+Evidence: InputController includes dash fields=true; server allow-list includes dash fields=true
+Impact: The client can send dash state, but sanitizeInputPayload removes keys absent from ALLOWED_INPUTS.
+Recommended fix: Add the intended dash fields to the server allow-list and validate their type and cooldown server-side.
+
+BW-006 | P1 | NOT DETECTED
+Online room leave is not called from scene exit flows
+Evidence: OnlineRoom.leave exists=true; scene call sites found=3
+Impact: A socket may remain associated with an old room, preventing the player from creating or joining another room.
+Recommended fix: Call leave on every exit, match end, page teardown and relevant scene shutdown. Unsubscribe local listeners too.
+
+BW-007 | P1 | NOT DETECTED
+Peer disconnect/reconnect notifications not handled by client
+Evidence: Server emits both peer lifecycle events=true; client subscribes=true
+Impact: Players may see a frozen/stale opponent without a proper reconnect state or clear UI feedback.
+Recommended fix: Subscribe to peer disconnect/reconnect events. Pause or terminate the match according to a defined reconnect policy.
+
+BW-008 | P1 | NOT DETECTED
+Room host removal does not reassign remaining socket slot
+Evidence: removePlayer compacts player array=true; updates slot metadata=true
+Impact: After slot 0 leaves, the remaining slot 1 player can still refer to slot 1 while now occupying index 0. Ownership checks may fail.
+Recommended fix: Reassign the surviving player slot and socket.data.slot atomically, and update host identity and role.
+
+BW-009 | P2 | NOT DETECTED
+Reduce screen shake setting may be inverted or inconsistent
+Evidence: FightScene has shake conditions for value != 0=false and value == 0=false; setting UI/storage reference=true
+Impact: The preference can produce more shake when Reduce screen shake is enabled, or inconsistent shake between hit paths.
+Recommended fix: Define one boolean meaning (for example reduceShake=true) and apply it consistently to all camera shake calls.
+
+BW-010 | P1 | NOT DETECTED
+Fighter creator camera may not be framed on the full model
+Evidence: Preview uses fixed zoom=true; explicit camera.lookAt=true
+Impact: Screenshots show the fighter cut off at the top of the preview. Fixed camera placement without target framing can crop taller models.
+Recommended fix: Fit the camera to the model bounding box, target the model center, and recompute on resize.
+
+BW-011 | P2 | NOT DETECTED
+Fighter creator has nested scroll containers
+Evidence: src/style.css: both creator-panel and creator-card use overflow:auto
+Impact: Two independent scroll areas can make the preview and form awkward to navigate and can hide fields.
+Recommended fix: Use one primary vertical scroll container. Keep the preview fixed or independently sized without a second vertical scrollbar.
+
+BW-012 | P2 | NOT DETECTED
+Online room event subscriptions may accumulate when panel is reopened
+Evidence: SelectScene onlineRoom.on registrations=4; cleanup/off pattern in SelectScene=true
+Impact: Repeatedly opening the online panel may register duplicate callbacks and duplicate scene starts or status updates.
+Recommended fix: Keep unsubscribe functions for each subscription and invoke them when the panel closes or scene shuts down.
+
+BW-013 | P2 | NOT DETECTED
+Dependency lockfile is missing
+Evidence: Lockfile found=true
+Impact: Dependency version ranges may resolve to different package versions on different installs and deployments.
+Recommended fix: Generate and commit the lockfile with the package manager used by the project. Use npm ci for repeatable CI/deploy builds.
+
+BW-014 | P2 | NOT DETECTED
+Audio settings may only save values instead of controlling actual audio
+Evidence: Project UI/source mentions future audio mixer=false
+Impact: Volume sliders that do not change music or sound effects appear functional but have no audio effect.
+Recommended fix: Implement a central audio mixer with master/music/SFX buses, or clearly disable/label volume controls until audio exists.
+
+BW-015 | P2 | REVIEW
+Scene resize/listener cleanup needs lifecycle verification
+Evidence: Scene scale resize listeners present=true; shutdown hooks present=true
+Impact: A listener that is not detached can run against destroyed scene objects after repeated navigation.
+Recommended fix: Store listener references and call scale.off during shutdown. Repeat enter/exit cycles and inspect console and memory.
+
+5. PROJECT AND ENVIRONMENT
+package.json Node requirement: >=20
+.nvmrc: 20
+Lockfile: present
+node_modules: present
+Vite executable: not present
+
+6. MANUAL BROWSER CHECKS STILL REQUIRED
+- Open the production preview URL and inspect DevTools Console and Network.
+- Test main menu, fighter selection, creator, settings, Arcade, Training and Local Versus.
+- Test screen sizes 1920x1080, 1366x768, 1280x666, 1024x768, 768x1024, 390x844 and 844x390.
+- Test creator preview framing, all scroll controls, and keyboard/touch input.
+- Test Online create/join with two separate browsers or devices, including host leave and reconnect.
+- Run at least ten consecutive match start/finish/exit cycles and watch for errors or memory growth.
+- Check fullscreen after pressing Escape, switching tabs, resizing and returning.
+- Do not treat client-side combat as cheat-resistant. Server authority must be implemented before public ranked PvP.
+
+7. LIMITATIONS
+- This script is a static/local audit. It does not edit or repair the game.
+- It does not automate Chrome, click UI controls, measure layout boxes, or record screenshots.
+- It cannot prove that anti-cheat is effective. Security requires adversarial testing and server-authoritative game state.
+- A NOT DETECTED result means only that this simple source-pattern check did not find the issue. It is not proof that the feature is correct.
+- Run npm install before expecting the Vite production build check to run.
+
+8. SUMMARY
+Total source findings flagged: 18
+Confirmed source findings: 0
+JavaScript files checked: 45
+Syntax failures: 0
