@@ -129,7 +129,45 @@ export class AssetLoader {
     }
   }
 
+  /**
+   * Loads or retrieves a cached model and returns a cloned instance ready for scene insertion.
+   */
+  async instantiateModel(url) {
+    const gltf = await this.loadModel(url);
+    if (!gltf || !gltf.scene) return null;
+    return {
+      scene: gltf.scene.clone(true),
+      animations: gltf.animations || []
+    };
+  }
+
+  /**
+   * Safely dispose a cached asset and its GPU resources.
+   */
+  disposeAsset(url) {
+    const asset = this.cache.get(url);
+    if (!asset) return;
+    if (asset.scene) {
+      asset.scene.traverse((node) => {
+        if (!node.isMesh) return;
+        node.geometry?.dispose?.();
+        const mats = Array.isArray(node.material) ? node.material : [node.material];
+        for (const m of mats) {
+          if (!m) continue;
+          for (const v of Object.values(m)) if (v?.isTexture) v.dispose();
+          m.dispose?.();
+        }
+      });
+    } else if (asset.isTexture) {
+      asset.dispose();
+    }
+    this.cache.delete(url);
+  }
+
   clear() {
+    for (const url of Array.from(this.cache.keys())) {
+      this.disposeAsset(url);
+    }
     this.cache.clear();
     this.totalItems = 0;
     this.loadedItems = 0;
@@ -138,3 +176,4 @@ export class AssetLoader {
 }
 
 export const assetLoader = new AssetLoader();
+

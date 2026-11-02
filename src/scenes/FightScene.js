@@ -289,8 +289,8 @@ export class FightScene extends Phaser.Scene {
       if (this.trainingSettings.infiniteEnergy) this.player.energy = 100;
       if (this.trainingSettings.infiniteDummy) this.cpu.health = 100;
     }
-    this.player.facing = this.cpu.x >= this.player.x ? 1 : -1;
-    this.cpu.facing = -this.player.facing;
+    this.player.updateFacing(this.cpu);
+    this.cpu.updateFacing(this.player);
     this.player.update(dt, input);
     if (this.localVersus) {
       this.cpu.update(dt, input2);
@@ -406,13 +406,21 @@ export class FightScene extends Phaser.Scene {
   }
 
   separateFighters() {
-    const minDistance = 0.92;
+    const minDistance = gameConfig.world.fighterSpacing || 0.92;
     const dx = this.cpu.x - this.player.x;
-    if (Math.abs(dx) < minDistance) {
-      const push = (minDistance - Math.abs(dx)) / 2;
-      const sign = Math.sign(dx) || 1;
-      this.player.x = Phaser.Math.Clamp(this.player.x - push * sign, gameConfig.world.minX, gameConfig.world.maxX);
-      this.cpu.x = Phaser.Math.Clamp(this.cpu.x + push * sign, gameConfig.world.minX, gameConfig.world.maxX);
+    const dz = (this.cpu.z ?? 0) - (this.player.z ?? 0);
+    const dist = Math.hypot(dx, dz);
+    if (dist < minDistance && dist > 0.001) {
+      const push = (minDistance - dist) / 2;
+      const nx = dx / dist;
+      const nz = dz / dist;
+      this.player.x = Phaser.Math.Clamp(this.player.x - push * nx, gameConfig.world.minX, gameConfig.world.maxX);
+      this.cpu.x = Phaser.Math.Clamp(this.cpu.x + push * nx, gameConfig.world.minX, gameConfig.world.maxX);
+      this.player.z = Phaser.Math.Clamp(this.player.z - push * nz, gameConfig.world.minZ, gameConfig.world.maxZ);
+      this.cpu.z = Phaser.Math.Clamp(this.cpu.z + push * nz, gameConfig.world.minZ, gameConfig.world.maxZ);
+    } else if (dist <= 0.001) {
+      this.player.x = Phaser.Math.Clamp(this.player.x - 0.2, gameConfig.world.minX, gameConfig.world.maxX);
+      this.cpu.x = Phaser.Math.Clamp(this.cpu.x + 0.2, gameConfig.world.minX, gameConfig.world.maxX);
     }
   }
 

@@ -193,3 +193,4 @@ All fighter attributes, move data, and frame timings are stored in clean JSON co
   }
 }
 ```
+

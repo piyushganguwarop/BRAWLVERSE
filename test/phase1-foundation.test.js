@@ -149,3 +149,4 @@ test('AssetLoader: lifecycle, progress notification, and graceful fallback', asy
 
   unsubscribe();
 });
+

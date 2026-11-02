@@ -139,3 +139,4 @@ export class PerformanceMonitor {
     this.domElement = null;
   }
 }
+

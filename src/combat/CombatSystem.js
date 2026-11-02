@@ -7,6 +7,25 @@ export class CombatSystem {
     this.juggleRegistry = new Map();
   }
 
+  /**
+   * Deterministic 3D volumetric hit check between attacker's active action and target.
+   * Checks horizontal range (X), depth range (Z), vertical reach (Y), and facing direction.
+   */
+  check3DHit(attacker, action, target) {
+    if (!attacker || !action || !target) return false;
+    const dx = target.x - attacker.x;
+    const dy = target.y - attacker.y;
+    const dz = (target.z ?? 0) - (attacker.z ?? 0);
+
+    const horizontalDistance = Math.abs(dx);
+    const inFront = Math.sign(dx) === attacker.facing || (horizontalDistance < 0.25 && Math.abs(dz) < 0.35);
+    const depthDistance = Math.abs(dz);
+    const depthReach = action.depthRange ?? action.depth ?? gameConfig.combat.defaultDepthRange ?? 0.85;
+    const verticalOverlap = Math.abs(dy) <= (action.height ?? 1.5);
+
+    return inFront && horizontalDistance <= action.range && depthDistance <= depthReach && verticalOverlap;
+  }
+
   update(fighters) {
     for (const fighter of fighters) if (fighter.y <= 0.08) this.juggleRegistry.set(fighter.id, 0);
     for (const attacker of fighters) {
@@ -17,11 +36,8 @@ export class CombatSystem {
         if (target.id === attacker.id || target.health <= 0) continue;
         const hitKey = `${attacker.id}:${attacker.actionSerial}:${target.id}`;
         if (this.hitRegistry.has(hitKey)) continue;
-        const dx = target.x - attacker.x;
-        const distance = Math.abs(dx);
-        const inFront = Math.sign(dx) === attacker.facing;
-        const verticalOverlap = Math.abs(target.y - attacker.y) <= (action.height ?? 1.5);
-        if (!inFront || distance > action.range || !verticalOverlap) continue;
+
+        if (!this.check3DHit(attacker, action, target)) continue;
 
         this.hitRegistry.add(hitKey);
         const previousJuggle = this.juggleRegistry.get(target.id) ?? 0;

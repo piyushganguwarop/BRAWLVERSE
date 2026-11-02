@@ -36,6 +36,20 @@
 
 ---
 
+### Phase 1.1: Integration and Validation
+- [x] **Connect InputManager:** Fully integrated into `FightScene` gameplay loop; keyboard, gamepad, and touch feed into unified `LogicalInputState`; scene teardown cleanly disposes all event listeners.
+- [x] **Complete 3D Movement:** Normalized diagonal motion vector ($\text{len} > 1.0 \to \text{normalize}$); enforced shared boundaries ($X: [-5.4, 5.4], Z: [-2.2, 2.2]$); $Y$ strictly reserved for jumping; depth-aware facing angle ($\text{atan2}(\Delta X, \Delta Z)$); directional 3D dashes.
+- [x] **3D Volumetric Hit Detection:** `CombatSystem.check3DHit` evaluates horizontal reach ($X$), depth reach ($Z$, configurable `depthRange`), vertical reach ($Y$), and facing direction; deterministic pure JS implementation.
+- [x] **Centralized Asset Loading:** `ThreeStage` and UI components route model & texture requests via `AssetLoader`; caching, instantiation cloning, and GPU resource disposal implemented.
+- [x] **Authoritative Configuration:** `gameConfig.world` establishes single source of truth for `Fighter`, `ArenaCamera`, and `ThreeStage`; contradictory dimensions removed.
+- [x] **Automated Integration Test Suite:** 12 new comprehensive integration tests in [`test/phase1-1-integration.test.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/test/phase1-1-integration.test.js) (115/115 total tests passing).
+- [x] **In-Browser Validation:** Verified live in headless Microsoft Edge Chromium across all 9 criteria (2 fighters moving in 3D, camera framing, depth-aware attacks, keyboard, touch, repeated match restart, F3 performance HUD, 0 console errors) ([`TEST_RESULTS.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/TEST_RESULTS.md)).
+- [x] **Documentation & Limitation Tracking:** Recorded in [`TEST_RESULTS.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/TEST_RESULTS.md), [`KNOWN_ISSUES.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/KNOWN_ISSUES.md), and [`TECHNICAL_ARCHITECTURE.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/TECHNICAL_ARCHITECTURE.md).
+
+*Exit Criteria: COMPLETE. Full 3D movement, unified input, depth-aware combat, and centralized asset loading verified in automated test suite and live Chromium browser runtime.*
+
+---
+
 ### Phase 2: First Arena (Neon District)
 - [ ] Ground geometry with floor materials and PBR/cel-shaded textures
 - [ ] Background architecture (skyscrapers, rooftop structures, neon signs, atmospheric glow)

@@ -100,3 +100,4 @@ Impact clarity dictates fighting game quality:
 - **Typography:** Bold condensed sans-serif with italicized slant (`Teko`, `Orbitron`, `Montserrat 900`).
 - **HUD Layout:** Asymmetric top bars with angled health depletion bars that flash white before decaying red.
 - **Button Styling:** High-tech angled chamfers with glowing cyan borders and active state tactile squash.
+

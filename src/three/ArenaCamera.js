@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { gameConfig } from '../config/gameConfig.js';
 
 /**
  * ArenaCamera - Angled Third-Person Dynamic Tracking Camera for Brawl Wars
@@ -21,7 +22,14 @@ export class ArenaCamera {
     maxDistance = 14.5,
     baseHeight = 3.2,
     smoothing = 8.5,
-    bounds = { minX: -8.0, maxX: 8.0, minZ: -4.5, maxZ: 4.5, minHeight: 2.2, maxHeight: 6.5 }
+    bounds = {
+      minX: (gameConfig?.world?.minX ?? -5.4) * 1.25,
+      maxX: (gameConfig?.world?.maxX ?? 5.4) * 1.25,
+      minZ: (gameConfig?.world?.minZ ?? -2.2) * 1.35,
+      maxZ: (gameConfig?.world?.maxZ ?? 2.2) * 1.35,
+      minHeight: 2.2,
+      maxHeight: 6.5
+    }
   } = {}) {
     this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
     this.baseDistance = baseDistance;
@@ -151,3 +159,4 @@ export class ArenaCamera {
     this.camera.lookAt(this.currentLookAt);
   }
 }
+

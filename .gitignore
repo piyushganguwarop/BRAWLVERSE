@@ -4,3 +4,5 @@ dist/
 .env
 .env.local
 *.log
+.temp-edge-profile*
+scripts/browser-validation-results.json

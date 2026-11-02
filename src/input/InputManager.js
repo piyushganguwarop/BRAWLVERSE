@@ -220,6 +220,8 @@ export class InputManager {
     target[action] = !!isDown;
     if (isDown) {
       this.buffers[player].push(action);
+    } else {
+      this.buffers[player].consume(action);
     }
   }
 
@@ -337,3 +339,4 @@ export class InputManager {
     this.buffers.p2.clear();
   }
 }
+

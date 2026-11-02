@@ -80,6 +80,7 @@ const config = {
 
 try {
   const game = new Phaser.Game(config);
+  if (typeof window !== 'undefined') window.__brawlGame = game;
   game.events.once(Phaser.Core.Events.READY, () => {
     if (bootMessage) bootMessage.textContent = 'Entering the arena...';
   });

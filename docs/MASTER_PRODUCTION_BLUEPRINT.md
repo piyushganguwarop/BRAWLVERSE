@@ -1574,3 +1574,4 @@ The first production milestone is not a large amount of content.
 It is one small but complete section of Brawl Wars that proves the art style, movement, camera, combat and performance work together.
 
 **The standard for Brawl Wars is a cohesive, polished and playable game. Every new system must meet that standard before it becomes part of the release.**
+

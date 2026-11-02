@@ -78,19 +78,22 @@ The arena uses standard 3D Cartesian coordinates:
 (Camera Front)
 ```
 
-- **X Axis:** Lateral positioning across the fighting platform (`-minX` to `+maxX`).
-- **Z Axis:** Depth positioning across the arena floor (`-minZ` to `+maxZ`).
-- **Y Axis:** Vertical elevation (`0` = floor contact, `> 0` = jump / juggle elevation).
+- **X Axis:** Lateral positioning across the fighting platform (`gameConfig.world.minX` = `-5.4m` to `maxX` = `+5.4m`).
+- **Z Axis:** Depth positioning across the arena floor (`gameConfig.world.minZ` = `-2.2m` to `maxZ` = `+2.2m`).
+- **Y Axis:** Vertical elevation (`floorY` = `0.0m` ground contact, `ceilingY` = `7.5m`, `> 0` = jump / juggle elevation).
 
 ### Kinematics Equations
-- **Ground Movement:**  
-  $$\vec{V}_{\text{ground}} = \text{normalize}(\vec{Input}_{XZ}) \times \text{speed}$$
+- **Ground Movement (Normalized Diagonal Motion):**  
+  $$\vec{V}_{\text{input}} = \begin{pmatrix} \text{dirX} \\ \text{dirZ} \end{pmatrix}, \quad L = \|\vec{V}_{\text{input}}\|$$  
+  $$\vec{V}_{\text{ground}} = \begin{cases} \frac{\vec{V}_{\text{input}}}{L} \times \text{speed} & \text{if } L > 1.0 \\ \vec{V}_{\text{input}} \times \text{speed} & \text{otherwise} \end{cases}$$  
+  This prevents diagonal movement speed from exceeding maximum linear speed.
 - **Jump & Gravity:**  
   $$Y(t + \Delta t) = Y(t) + V_y \cdot \Delta t$$  
-  $$V_y(t + \Delta t) = V_y(t) - g \cdot \Delta t \quad (g = 28\,\text{m/s}^2)$$
-- **Facing Vector:**  
-  $$\vec{F}_{\text{target}} = \text{normalize}(\vec{Pos}_{\text{opponent}} - \vec{Pos}_{\text{self}})$$  
-  Characters smoothly rotate to face their opponent with configurable angular velocity.
+  $$V_y(t + \Delta t) = V_y(t) - g \cdot \Delta t \quad (g = 22\,\text{m/s}^2)$$
+- **Facing Vector & Angle:**  
+  $$\vec{F}_{\text{target}} = \vec{Pos}_{\text{opponent}} - \vec{Pos}_{\text{self}}$$  
+  $$\text{facing} = \begin{cases} +1 & \text{if } \Delta X \ge 0 \\ -1 & \text{if } \Delta X < 0 \end{cases}, \quad \theta_{\text{facing}} = \text{atan2}(\Delta X, \Delta Z)$$  
+  Characters smoothly rotate around $Y$ to face their opponent in full 3D space.
 
 ---
 
@@ -160,7 +163,11 @@ Hits are evaluated in full 3D space using volumetric bounding boxes/spheres, rat
                            - Juggle lift if airborne                - Stun (120ms)
 ```
 
-- **Depth Tolerance:** Attacks have a lateral reach (X), vertical reach (Y), and depth reach (Z). An opponent stepping off-axis into the arena foreground or background can dodge a linear strike.
+- **Depth Tolerance:** Attacks have a lateral reach ($X$), vertical reach ($Y$), and depth reach ($Z$). An attack connects if and only if all three spatial conditions are satisfied:
+  $$|x_{\text{target}} - x_{\text{attacker}}| \le \text{range}_X$$
+  $$|z_{\text{target}} - z_{\text{attacker}}| \le \text{depthRange}_Z \quad (\text{default } 0.85\text{m})$$
+  $$|y_{\text{target}} - y_{\text{attacker}}| \le \text{height}_Y \quad (\text{default } 1.5\text{m})$$
+  $$\text{sign}(x_{\text{target}} - x_{\text{attacker}}) = \text{facing}_{\text{attacker}} \lor (\Delta X < 0.25\text{m} \land \Delta Z < 0.35\text{m})$$
 - **Cancel Windows:** Light attacks feature cancellation windows into medium strikes, which cancel into special techniques.
 
 ---
@@ -183,3 +190,4 @@ Hits are evaluated in full 3D space using volumetric bounding boxes/spheres, rat
 - **`main`**: Protected release branch. Only verified, production-ready code is merged here.
 - **`v1`**: Archived milestone branch containing the completed starter game.
 - **`v2-reconstruction`**: Active feature branch where all 10 phases of the reconstruction take place.
+

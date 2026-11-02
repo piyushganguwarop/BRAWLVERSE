@@ -91,3 +91,4 @@ The camera system respects hard containment limits to prevent clipping through b
 - Camera Y Position clamped: `[2.5m, 6.0m]`
 - Camera Z Distance clamped: `[7.0m, 14.5m]`
 - Camera LookAt Y offset: `1.2m` (targets fighter chest height)
+

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ArenaCamera } from './ArenaCamera.js';
+import { assetLoader } from '../core/AssetLoader.js';
+import { gameConfig } from '../config/gameConfig.js';
 
 function material(color, roughness = 0.72) {
   return new THREE.MeshToonMaterial({ color });
@@ -143,7 +144,6 @@ export class ThreeStage {
     this.scene.add(this.arenaGroup);
     this.makeArena("neon");
     this.fighters = new Map();
-    this.gltfLoader = new GLTFLoader();
     this.clock = new THREE.Clock();
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -221,9 +221,12 @@ export class ThreeStage {
     // GLB is optional. The procedural fighter remains visible if no model is supplied
     // or the file cannot be loaded, so the game always remains playable.
     if (character.model) {
-      this.gltfLoader.load(character.model, (gltf) => {
-        if (!this.fighters.has(id)) { disposeResources(gltf.scene); return; }
-        const visual = gltf.scene;
+      assetLoader.instantiateModel(character.model).then((inst) => {
+        if (!inst || !this.fighters.has(id)) {
+          if (inst?.scene) disposeResources(inst.scene);
+          return;
+        }
+        const visual = inst.scene;
         const bounds = new THREE.Box3().setFromObject(visual);
         const size = bounds.getSize(new THREE.Vector3());
         const height = Math.max(size.y, 0.001);
@@ -237,9 +240,9 @@ export class ThreeStage {
         model.proceduralRoot.visible = false;
         model.visual = visual;
         model.mixer = new THREE.AnimationMixer(visual);
-        model.actions = this.buildAnimationActions(model.mixer, gltf.animations || []);
+        model.actions = this.buildAnimationActions(model.mixer, inst.animations || []);
         model.lastState = '';
-      }, undefined, (error) => {
+      }).catch((error) => {
         console.warn(`Could not load fighter model for ${id}; using procedural fallback.`, error);
       });
     }
@@ -281,7 +284,7 @@ export class ThreeStage {
     const targetZ = fighter.z !== undefined ? fighter.z : (fighter.id === 'player' ? 0.35 : -0.15);
     if (m.visual) {
       m.root.position.set(fighter.x, fighter.y, targetZ);
-      m.root.rotation.y = fighter.facing === 1 ? 0 : Math.PI;
+      m.root.rotation.y = fighter.facingAngle !== undefined ? fighter.facingAngle : (fighter.facing === 1 ? 0 : Math.PI);
       m.root.rotation.z = state === 'hit' ? -0.16 - Math.sin(time * 34) * 0.045 : 0;
       m.root.scale.y = fighter.crouching ? 0.88 : 1;
       if (m.visual) m.visual.visible = true;
@@ -295,7 +298,7 @@ export class ThreeStage {
     const action = Math.max(0, Math.min(1, fighter.actionTime / 0.55));
 
     m.root.position.set(fighter.x, fighter.y, targetZ);
-    m.root.rotation.y = fighter.facing === 1 ? 0 : Math.PI;
+    m.root.rotation.y = fighter.facingAngle !== undefined ? fighter.facingAngle : (fighter.facing === 1 ? 0 : Math.PI);
     m.root.rotation.z = state === 'hit' ? -0.16 - Math.sin(time * 34) * 0.045 : 0;
 
     // Locomotion and grounded stance.

@@ -19,7 +19,8 @@ export class Fighter {
     this.comboCount = 0; this.comboWindow = 0; this.stun = 0;
     this.comboScale = 1; this.juggleHits = 0; this.launcher = false;
     this.blocking = false; this.crouching = false; this.hitFlash = 0;
-    this.dashCooldown = 0; this.dashTime = 0; this.dashDirection = 0; this.airAttackUsed = false;
+    this.dashCooldown = 0; this.dashTime = 0; this.dashDirection = 0; this.dashDirectionZ = 0; this.airAttackUsed = false;
+    this.facingAngle = facing === 1 ? 0 : Math.PI;
     this.invulnerable = 0; this.knockbackVelocity = 0; this.perfectBlock = false; this.blockAge = 999;
   }
 
@@ -50,8 +51,18 @@ export class Fighter {
     const locked = this.activeAction || this.state === 'hit' || this.stun > 0;
     if (!locked && !this.blocking && this.dashCooldown <= 0 && this.dashTime <= 0) {
       const requested = input.dashForward ? 1 : input.dashBack ? -1 : 0;
-      if (requested) {
-        this.dashDirection = requested * this.facing;
+      if (requested || input.dash) {
+        if (requested) {
+          this.dashDirection = requested * this.facing;
+          this.dashDirectionZ = 0;
+        } else if (typeof input.moveX === 'number' && typeof input.moveZ === 'number' && (input.moveX !== 0 || input.moveZ !== 0)) {
+          const dashLen = Math.hypot(input.moveX, input.moveZ) || 1;
+          this.dashDirection = input.moveX / dashLen;
+          this.dashDirectionZ = input.moveZ / dashLen;
+        } else {
+          this.dashDirection = this.facing;
+          this.dashDirectionZ = 0;
+        }
         this.dashTime = 0.16;
         this.dashCooldown = 0.62;
         this.invulnerable = Math.max(this.invulnerable, 0.10);
@@ -60,21 +71,31 @@ export class Fighter {
     }
     if (this.dashTime > 0 && !locked) {
       this.vx = this.dashDirection * 10.5;
+      this.vz = (this.dashDirectionZ || 0) * 10.5;
       this.x += this.vx * dt;
+      this.z += this.vz * dt;
     }
     this.blocking = !locked && !!input.block && this.y <= 0.02;
     this.crouching = !locked && !!input.down && !this.blocking && this.y <= 0.02;
 
     if (!locked && !this.blocking && this.dashTime <= 0) {
-      const dirX = typeof input.moveX === 'number' && input.moveX !== 0 ? input.moveX : (input.right ? 1 : 0) - (input.left ? 1 : 0);
-      const dirZ = typeof input.moveZ === 'number' && input.moveZ !== 0 ? input.moveZ : (input.depthDown ? 1 : 0) - (input.depthUp ? 1 : 0);
+      let dirX = typeof input.moveX === 'number' && input.moveX !== 0 ? input.moveX : (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      let dirZ = typeof input.moveZ === 'number' && input.moveZ !== 0 ? input.moveZ : (input.depthDown ? 1 : 0) - (input.depthUp ? 1 : 0);
+
+      // Normalize diagonal movement so speed does not exceed max linear speed
+      const moveLen = Math.hypot(dirX, dirZ);
+      if (moveLen > 1.0) {
+        dirX /= moveLen;
+        dirZ /= moveLen;
+      }
+
       const speedStyle = this.style === 'fast' ? 1.13 : this.style === 'tank' ? 0.88 : 1;
       const air = this.y > 0.02 ? gameConfig.fighter.airControl : 1;
       const speed = gameConfig.fighter.moveSpeed * this.speedMultiplier * speedStyle * air;
       this.vx = dirX * speed;
       this.vz = dirZ * speed;
       this.x += this.vx * dt;
-      this.z = Math.max(gameConfig.world.minZ ?? -3.5, Math.min(gameConfig.world.maxZ ?? 3.5, this.z + this.vz * dt));
+      this.z += this.vz * dt;
       if (input.jump && this.y <= 0.001) { this.vy = gameConfig.fighter.jumpSpeed; this.airAttackUsed = false; }
       this.state = (this.y > 0.02 || this.vy > 0) ? 'jump' : (dirX || dirZ) ? 'walk' : this.crouching ? 'crouch' : 'idle';
     } else if (this.blocking) {
@@ -91,7 +112,18 @@ export class Fighter {
     this.knockbackVelocity *= Math.max(0, 1 - 8 * dt);
     if (Math.abs(this.knockbackVelocity) < 0.03) this.knockbackVelocity = 0;
     this.x = Math.max(gameConfig.world.minX, Math.min(gameConfig.world.maxX, this.x));
+    this.z = Math.max(gameConfig.world.minZ, Math.min(gameConfig.world.maxZ, this.z));
     if (this.y <= 0.001) this.airAttackUsed = false;
+  }
+
+  updateFacing(target) {
+    if (!target) return;
+    const dx = target.x - this.x;
+    const dz = (target.z ?? 0) - (this.z ?? 0);
+    if (Math.abs(dx) > 0.05) {
+      this.facing = dx >= 0 ? 1 : -1;
+    }
+    this.facingAngle = Math.atan2(dx, dz);
   }
 
   startAction(name) {

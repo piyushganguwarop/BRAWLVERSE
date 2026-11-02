@@ -45,3 +45,4 @@ To prevent performance degradation during production:
    - Geometries & Textures in VRAM
    - JS Heap memory
 3. Automated test script verifies zero memory leaks across 10 repeated match load/unload cycles.
+
