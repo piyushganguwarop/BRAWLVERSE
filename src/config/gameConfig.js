@@ -1,7 +1,7 @@
 export const gameConfig = {
   width: 1280,
   height: 720,
-  world: { minX: -5.4, maxX: 5.4, floorY: 0, gravity: 22, fighterSpacing: 0.92 },
+  world: { minX: -5.4, maxX: 5.4, minZ: -3.5, maxZ: 3.5, floorY: 0, gravity: 22, fighterSpacing: 0.92 },
   fighter: { moveSpeed: 4.3, jumpSpeed: 8.6, maxHealth: 100, maxEnergy: 100, airControl: 0.58, groundFriction: 12 },
   combat: {
     punch: { cancelStart: 0.16, cancelEnd: 0.29, damage: 7, range: 1.65, cooldown: 0.34, duration: 0.34, activeStart: 0.09, activeEnd: 0.19, energy: 5, hitstun: 0.18, knockback: 0.32, height: 1.45 },

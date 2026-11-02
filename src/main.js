@@ -4,9 +4,26 @@ import { FightScene } from './scenes/FightScene.js';
 import { SelectScene } from './scenes/SelectScene.js';
 import { MainMenuScene } from './scenes/MainMenuScene.js';
 import { audioManager } from './audio/AudioManager.js';
+import { PerformanceMonitor } from './core/PerformanceMonitor.js';
+import { assetLoader } from './core/AssetLoader.js';
 import './style.css';
 
+export const performanceMonitor = new PerformanceMonitor();
+if (typeof document !== 'undefined') {
+  performanceMonitor.mount();
+}
+
 const bootMessage = document.getElementById('boot-message');
+assetLoader.on('progress', ({ ratio }) => {
+  if (bootMessage) {
+    const pct = Math.round(ratio * 100);
+    bootMessage.textContent = `Loading combat systems (${pct}%)...`;
+  }
+  const track = document.querySelector('.boot-track span');
+  if (track) {
+    track.style.width = `${Math.round(ratio * 100)}%`;
+  }
+});
 const runtimeNotice = document.getElementById('runtime-notice');
 const runtimeMessage = document.getElementById('runtime-notice-message');
 const reloadButton = document.getElementById('runtime-reload');

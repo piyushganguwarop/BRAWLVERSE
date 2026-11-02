@@ -3,8 +3,8 @@ import { gameConfig } from '../config/gameConfig.js';
 const ACTIONS = new Set(['punch', 'kick', 'grab', 'special']);
 
 export class Fighter {
-  constructor({ id, x, facing, isCpu = false, character = null, color = 0x35a7ff, accent = 0xe8edf7 }) {
-    this.id = id; this.x = x; this.y = 0; this.vy = 0; this.vx = 0;
+  constructor({ id, x, y = 0, z = 0, facing, isCpu = false, character = null, color = 0x35a7ff, accent = 0xe8edf7 }) {
+    this.id = id; this.x = x; this.y = y; this.z = z; this.vy = 0; this.vx = 0; this.vz = 0;
     this.facing = facing; this.isCpu = isCpu; this.character = character;
     this.color = character?.color ?? color; this.accent = character?.accent ?? accent;
     this.skin = character?.skin ?? 0xc98f68; this.hair = character?.hair ?? 0x20232c;
@@ -66,17 +66,22 @@ export class Fighter {
     this.crouching = !locked && !!input.down && !this.blocking && this.y <= 0.02;
 
     if (!locked && !this.blocking && this.dashTime <= 0) {
-      const direction = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      const dirX = typeof input.moveX === 'number' && input.moveX !== 0 ? input.moveX : (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      const dirZ = typeof input.moveZ === 'number' && input.moveZ !== 0 ? input.moveZ : (input.depthDown ? 1 : 0) - (input.depthUp ? 1 : 0);
       const speedStyle = this.style === 'fast' ? 1.13 : this.style === 'tank' ? 0.88 : 1;
       const air = this.y > 0.02 ? gameConfig.fighter.airControl : 1;
-      this.vx = direction * gameConfig.fighter.moveSpeed * this.speedMultiplier * speedStyle * air;
+      const speed = gameConfig.fighter.moveSpeed * this.speedMultiplier * speedStyle * air;
+      this.vx = dirX * speed;
+      this.vz = dirZ * speed;
       this.x += this.vx * dt;
+      this.z = Math.max(gameConfig.world.minZ ?? -3.5, Math.min(gameConfig.world.maxZ ?? 3.5, this.z + this.vz * dt));
       if (input.jump && this.y <= 0.001) { this.vy = gameConfig.fighter.jumpSpeed; this.airAttackUsed = false; }
-      this.state = this.y > 0.02 ? 'jump' : direction ? 'walk' : this.crouching ? 'crouch' : 'idle';
+      this.state = (this.y > 0.02 || this.vy > 0) ? 'jump' : (dirX || dirZ) ? 'walk' : this.crouching ? 'crouch' : 'idle';
     } else if (this.blocking) {
-      this.vx = 0; this.state = 'idle';
+      this.vx = 0; this.vz = 0; this.state = 'idle';
     } else {
       this.vx *= Math.max(0, 1 - 10 * dt);
+      this.vz *= Math.max(0, 1 - 10 * dt);
     }
 
     this.vy -= gameConfig.world.gravity * dt;

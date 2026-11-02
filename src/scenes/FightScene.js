@@ -11,6 +11,7 @@ import { getFighter } from '../characters/roster.js';
 import { onlineRoom } from '../multiplayer/OnlineRoom.js';
 import { awardMatch } from '../progression/Progression.js';
 import { audioManager } from '../audio/AudioManager.js';
+import { performanceMonitor } from '../main.js';
 
 export class FightScene extends Phaser.Scene {
   constructor() { super('FightScene'); }
@@ -40,6 +41,7 @@ export class FightScene extends Phaser.Scene {
     if (this.localVersus && matchMedia('(pointer: coarse), (max-width: 760px)').matches) this.createPlayerTwoTouchControls();
     this.three = new ThreeStage(document.getElementById('three-root'));
     this.three.setArena(this.stageId);
+    if (this.three.renderer) performanceMonitor.setRenderer(this.three.renderer);
     const localX = this.online && this.slot === 1 ? 2.5 : -2.5;
     const remoteX = -localX;
     this.player = new Fighter({ id: 'player', x: localX, facing: localX < 0 ? 1 : -1, character: this.playerCharacter });
@@ -261,6 +263,7 @@ export class FightScene extends Phaser.Scene {
   }
 
   update(_time, deltaMs) {
+    performanceMonitor.tick();
     if (this.roundOver || (this.online && this.peerConnected === false)) return;
     const dt = Math.min(deltaMs / 1000, 0.033);
     if (this.hitStop > 0) {

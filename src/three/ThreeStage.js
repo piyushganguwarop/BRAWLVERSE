@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { ArenaCamera } from './ArenaCamera.js';
 
 function material(color, roughness = 0.72) {
-  return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.04 });
+  return new THREE.MeshToonMaterial({ color });
 }
 function box(w, h, d, mat, x = 0, y = 0, z = 0) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -123,9 +124,8 @@ export class ThreeStage {
     if (container) container.replaceChildren();
     this.scene = new THREE.Scene();
     this.scene.background = null;
-    this.camera = new THREE.OrthographicCamera(-7.2, 7.2, 4.05, -4.05, 0.1, 100);
-    this.camera.position.set(0, 4.0, 16);
-    this.camera.lookAt(0, 1.8, 0);
+    this.arenaCamera = new ArenaCamera();
+    this.camera = this.arenaCamera.camera;
     this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     this.applyQuality(localStorage.getItem('fighter.settings.quality') || 'high');
     this.renderer.setSize(container.clientWidth || window.innerWidth, container.clientHeight || window.innerHeight);
@@ -278,8 +278,9 @@ export class ThreeStage {
     const m = this.fighters.get(fighter.id); if (!m) return;
     const state = fighter.blocking ? 'block' : fighter.crouching ? 'crouch' : fighter.state;
     this.updateLoadedAnimation(m, state, dt);
+    const targetZ = fighter.z !== undefined ? fighter.z : (fighter.id === 'player' ? 0.35 : -0.15);
     if (m.visual) {
-      m.root.position.set(fighter.x, fighter.y, fighter.id === 'player' ? 0.35 : -0.15);
+      m.root.position.set(fighter.x, fighter.y, targetZ);
       m.root.rotation.y = fighter.facing === 1 ? 0 : Math.PI;
       m.root.rotation.z = state === 'hit' ? -0.16 - Math.sin(time * 34) * 0.045 : 0;
       m.root.scale.y = fighter.crouching ? 0.88 : 1;
@@ -293,7 +294,7 @@ export class ThreeStage {
     const pulse = Math.sin(time * 18);
     const action = Math.max(0, Math.min(1, fighter.actionTime / 0.55));
 
-    m.root.position.set(fighter.x, fighter.y, fighter.id === 'player' ? 0.35 : -0.15);
+    m.root.position.set(fighter.x, fighter.y, targetZ);
     m.root.rotation.y = fighter.facing === 1 ? 0 : Math.PI;
     m.root.rotation.z = state === 'hit' ? -0.16 - Math.sin(time * 34) * 0.045 : 0;
 
@@ -364,13 +365,17 @@ export class ThreeStage {
   resize() {
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
-    const aspect = w / h;
-    const viewHeight = 8.1;
-    this.camera.left = -viewHeight * aspect / 2;
-    this.camera.right = viewHeight * aspect / 2;
-    this.camera.top = viewHeight / 2;
-    this.camera.bottom = -viewHeight / 2;
-    this.camera.updateProjectionMatrix();
+    if (this.arenaCamera) {
+      this.arenaCamera.resize(w, h);
+    } else if (this.camera?.isOrthographicCamera) {
+      const aspect = w / h;
+      const viewHeight = 8.1;
+      this.camera.left = -viewHeight * aspect / 2;
+      this.camera.right = viewHeight * aspect / 2;
+      this.camera.top = viewHeight / 2;
+      this.camera.bottom = -viewHeight / 2;
+      this.camera.updateProjectionMatrix();
+    }
     this.renderer.setSize(w, h);
   }
 
@@ -379,6 +384,12 @@ export class ThreeStage {
     const dt = Math.min(this.clock.getDelta(), 0.05);
     const time = this.clock.elapsedTime;
     this.fighters.forEach((_, id) => { if (this.currentFighters?.[id]) this.updateFighter(this.currentFighters[id], time, dt); });
+    if (this.arenaCamera && this.currentFighters) {
+      const fighterList = Object.values(this.currentFighters);
+      const p1 = this.currentFighters['player'] || fighterList[0];
+      const p2 = this.currentFighters['cpu'] || this.currentFighters['remote'] || fighterList[1];
+      this.arenaCamera.update(p1, p2, dt);
+    }
     this.renderer.render(this.scene, this.camera);
   }
 
