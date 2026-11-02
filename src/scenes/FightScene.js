@@ -368,10 +368,11 @@ export class FightScene extends Phaser.Scene {
   handleSecondPlayerActions(input) {
     if (input.punch && !this.prevP2Punch) this.cpu.startAction('punch');
     if (input.kick && !this.prevP2Kick) this.cpu.startAction('kick');
+    if (input.heavy && !this.prevP2Heavy) this.cpu.startAction('heavy');
     if (input.special && !this.prevP2Special) this.cpu.startAction('special');
     if (input.grab && !this.prevP2Grab) this.cpu.startAction('grab');
-    this.prevP2Punch=input.punch; this.prevP2Kick=input.kick;
-    this.prevP2Special=input.special; this.prevP2Grab=input.grab;
+    this.prevP2Punch = input.punch; this.prevP2Kick = input.kick; this.prevP2Heavy = input.heavy;
+    this.prevP2Special = input.special; this.prevP2Grab = input.grab;
   }
 
   createPlayerTwoTouchControls() {
@@ -393,9 +394,10 @@ export class FightScene extends Phaser.Scene {
   handlePlayerActions(input) {
     if (input.punch && !this.prevPunch) this.player.startAction('punch');
     if (input.kick && !this.prevKick) this.player.startAction('kick');
+    if (input.heavy && !this.prevHeavy) this.player.startAction('heavy');
     if (input.special && !this.prevSpecial) this.player.startAction('special');
     if (input.grab && !this.prevGrab) this.player.startAction('grab');
-    this.prevPunch = input.punch; this.prevKick = input.kick; this.prevSpecial = input.special; this.prevGrab = input.grab;
+    this.prevPunch = input.punch; this.prevKick = input.kick; this.prevHeavy = input.heavy; this.prevSpecial = input.special; this.prevGrab = input.grab;
   }
 
   updateCpu(dt) {

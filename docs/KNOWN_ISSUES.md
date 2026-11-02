@@ -1,7 +1,7 @@
 # Brawl Wars - Known Issues & Technical Limitations Register
 
-**Document Version:** 1.0  
-**Phase Milestone:** Phase 1.1 Complete  
+**Document Version:** 1.2.1  
+**Phase Milestone:** Phase 1.2 Final Source-Level Correction  
 **Last Updated:** 2026-11-02  
 
 ---
@@ -41,9 +41,19 @@ The following items are intentional scope boundaries or work-in-progress compone
 - [x] **InputManager Disconnection:** `InputManager` is now fully integrated into `InputController` and actively drives `FightScene` in the browser.
 
 ## 3. Resolved in Phase 1.2
+
 - [x] **Player 2 Input Conflicts:** Eliminated all overlapping keys for Player 2 (Numpad actions 0, 1, 3, Decimal, 4, 5, 6, 7, 8, 9 with distinct navigation cluster fallback).
 - [x] **Player 1 W/S Motion vs Jump/Crouch Collision:** `KeyW` and `KeyS` strictly modulate depth movement (`moveZ`) and never trigger jump or crouch.
 - [x] **Duplicate Input Processing:** `InputManager` established as the single authoritative logical input source.
 - [x] **1D Facing in 3D Space:** Implemented 3D vector dot product alignment for directional attacks and blocking; rear attacks cleanly bypass guard.
 - [x] **Close-Contact Facing Jitter:** Added contact hysteresis deadzone (< 0.18m) preventing erratic flipping when fighters are in close quarters.
 - [x] **Shared GLTF Resource Disposals:** Hardened `AssetLoader` with in-flight request deduplication, typed caching, reference-counted instances with isolated material clones, and safe GPU memory release.
+
+## 4. Resolved in Phase 1.2 Final Source-Level Correction
+
+- [x] **Legacy Keyboard Processing Fully Removed:** Removed obsolete Phaser keyboard listeners and direct reads (`k.*.isDown`) from `InputController`. `InputManager` is now the sole physical keyboard pipeline.
+- [x] **Dash Binding Isolation:** Player 1 dash actions (`KeyE`/`KeyQ`) and Player 2 dash actions (`Numpad3`/`NumpadDecimal`) operate with total isolation. Numpad4 exclusively triggers P2 punch; Numpad6 exclusively triggers P2 heavy.
+- [x] **Kick and Heavy Attack Separation:** Completely decoupled `heavy` from `kick`. Implemented dedicated `heavy` attack profile in `gameConfig.combat` (16 damage, 0.72s cooldown, 0.58s duration, 0.65 knockback, 1.5 height) with distinct animation mapping and state machine support.
+- [x] **Safe AssetLoader.clear() Lifecycle & Deferred Disposal:** `clear()` protects active instances by deferring GPU buffer disposal to `retiredAssets`, executing base geometry/texture cleanup only when the final instance releases. Cloned materials are cleanly disposed, repeated release calls are idempotent, and texture ownership is preserved.
+- [x] **3D XZ Knockback and Grab Displacement:** Upgraded knockback and grab displacement from 1D X-only vectors to true 3D XZ directional vectors based on normalized attacker-to-target or facing directions.
+- [x] **Natural Browser Game Loop Validation:** Added automated verification in Microsoft Edge headless ensuring input naturally reaches the fighter and executes physics updates without manual `scene.update()` steps.

@@ -1,6 +1,6 @@
 import { gameConfig } from '../config/gameConfig.js';
 
-const ACTIONS = new Set(['punch', 'kick', 'grab', 'special']);
+const ACTIONS = new Set(['punch', 'kick', 'heavy', 'grab', 'special']);
 
 export class Fighter {
   constructor({ id, x, y = 0, z = 0, facing, isCpu = false, character = null, color = 0x35a7ff, accent = 0xe8edf7 }) {
@@ -15,14 +15,18 @@ export class Fighter {
     this.health = gameConfig.fighter.maxHealth; this.energy = 20;
     this.state = 'idle'; this.actionTime = 0; this.actionElapsed = 0;
     this.actionSerial = 0; this.activeAction = null;
-    this.cooldowns = { punch: 0, kick: 0, grab: 0, special: 0 };
+    this.cooldowns = { punch: 0, kick: 0, heavy: 0, grab: 0, special: 0 };
     this.comboCount = 0; this.comboWindow = 0; this.stun = 0;
     this.comboScale = 1; this.juggleHits = 0; this.launcher = false;
     this.blocking = false; this.crouching = false; this.hitFlash = 0;
     this.dashCooldown = 0; this.dashTime = 0; this.dashDirection = 0; this.dashDirectionZ = 0; this.airAttackUsed = false;
     this.facingAngle = facing === 1 ? Math.PI / 2 : -Math.PI / 2;
     this.facingVector = { x: facing === 1 ? 1 : -1, z: 0 };
-    this.invulnerable = 0; this.knockbackVelocity = 0; this.perfectBlock = false; this.blockAge = 999;
+    this.invulnerable = 0;
+    this.knockbackVelocity = 0;
+    this.knockbackVelocityZ = 0;
+    this.perfectBlock = false;
+    this.blockAge = 999;
   }
 
   update(dt, input = {}) {
@@ -114,8 +118,11 @@ export class Fighter {
     this.y = Math.max(0, this.y + this.vy * dt);
     if (this.y === 0 && this.vy < 0) { this.vy = 0; this.juggleHits = 0; }
     this.x += this.knockbackVelocity * dt;
+    this.z += this.knockbackVelocityZ * dt;
     this.knockbackVelocity *= Math.max(0, 1 - 8 * dt);
+    this.knockbackVelocityZ *= Math.max(0, 1 - 8 * dt);
     if (Math.abs(this.knockbackVelocity) < 0.03) this.knockbackVelocity = 0;
+    if (Math.abs(this.knockbackVelocityZ) < 0.03) this.knockbackVelocityZ = 0;
     this.x = Math.max(gameConfig.world.minX, Math.min(gameConfig.world.maxX, this.x));
     this.z = Math.max(gameConfig.world.minZ, Math.min(gameConfig.world.maxZ, this.z));
     if (this.y <= 0.001) this.airAttackUsed = false;
@@ -143,20 +150,21 @@ export class Fighter {
     const spec = gameConfig.combat[name];
     if (!ACTIONS.has(name) || !spec || this.blocking || this.stun > 0 || this.cooldowns[name] > 0) return false;
     const current = this.activeAction;
-    const canCancel = current && ['punch','kick'].includes(current.name) &&
-      ['punch','kick'].includes(name) &&
+    const chainableAttacks = ['punch', 'kick', 'heavy'];
+    const canCancel = current && chainableAttacks.includes(current.name) &&
+      chainableAttacks.includes(name) &&
       this.actionElapsed >= (current.cancelStart ?? current.duration * 0.55) &&
       this.actionElapsed <= (current.cancelEnd ?? current.duration * 0.88);
     if ((this.state !== 'idle' || current) && !canCancel) return false;
     if (name === 'special' && this.energy < spec.energyCost) return false;
     if (name === 'special') this.energy -= spec.energyCost;
     else this.energy = Math.min(gameConfig.fighter.maxEnergy, this.energy + spec.energy);
-    if (['punch','kick'].includes(name)) {
+    if (chainableAttacks.includes(name)) {
       this.comboCount = this.comboWindow > 0 ? this.comboCount + 1 : 1;
       this.comboWindow = gameConfig.combat.comboWindow;
     }
     this.actionSerial += 1;
-    const variant = this.y > 0.08 ? 'air' : this.crouching && ['punch','kick'].includes(name) ? 'crouch' : '';
+    const variant = this.y > 0.08 ? 'air' : this.crouching && chainableAttacks.includes(name) ? 'crouch' : '';
     const launcher = name === 'kick' && this.comboCount >= 3 && !variant;
     const tuned = variant === 'air' ? { damage: spec.damage * 0.88, range: spec.range * 1.08, knockback: spec.knockback * 1.12, height: (spec.height ?? 1.5) + 0.6 } :
       variant === 'crouch' ? { damage: spec.damage * 1.08, range: spec.range * 0.92, height: Math.max(0.8, (spec.height ?? 1.5) - 0.3) } : {};
@@ -169,6 +177,9 @@ export class Fighter {
   takeHit(damage, attackerFacing, spec = {}, attacker = null) {
     if (this.invulnerable > 0 || this.health <= 0) return { damage: 0, blocked: false, perfect: false };
     let facingAttacker = false;
+    let dirX = 0;
+    let dirZ = 0;
+
     if (attacker && typeof attacker.x === 'number') {
       const dx = attacker.x - this.x;
       const dz = (attacker.z ?? 0) - (this.z ?? 0);
@@ -183,12 +194,24 @@ export class Fighter {
         const dot = fx * (dx / dist) + fz * (dz / dist);
         // Defender faces toward incoming attacker if alignment is within front cone (>= 0.20)
         facingAttacker = dot >= 0.20;
+
+        // Knockback pushes away from attacker: vector from attacker to defender (-dx, -dz)
+        dirX = (-dx / dist) || 0;
+        dirZ = (-dz / dist) || 0;
       } else {
         facingAttacker = this.facing === -attackerFacing;
+        let fx = attacker.facingVector?.x ?? attackerFacing;
+        let fz = attacker.facingVector?.z ?? 0;
+        const flen = Math.hypot(fx, fz) || 1;
+        dirX = (fx / flen) || 0;
+        dirZ = (fz / flen) || 0;
       }
     } else {
       facingAttacker = this.facing === -attackerFacing;
+      dirX = attackerFacing ?? 1;
+      dirZ = 0;
     }
+
     const guarding = this.blocking && facingAttacker && this.y <= 0.02;
     const perfect = guarding && this.blockAge <= gameConfig.combat.perfectBlockWindow;
     const blocked = guarding && !spec.breaksGuard;
@@ -201,7 +224,9 @@ export class Fighter {
       this.state = 'hit'; this.activeAction = null; this.actionTime = spec.hitstun ?? 0.25;
       this.stun = spec.hitstun ?? 0.25; this.actionElapsed = 0;
       this.comboWindow = 0; this.comboCount = 0;
-      this.knockbackVelocity = attackerFacing * (spec.knockback ?? 0.35) * 5;
+      const kb = (spec.knockback ?? 0.35) * 5;
+      this.knockbackVelocity = (dirX * kb) || 0;
+      this.knockbackVelocityZ = (dirZ * kb) || 0;
       this.blocking = false;
     }
     return { damage: actual, blocked, perfect };

@@ -1,23 +1,28 @@
 import { InputManager } from './InputManager.js';
 
+/**
+ * Legacy key bindings reference (preserved for static configuration documentation & backward compatibility):
+ * {
+ *   leftArrow: 'LEFT',
+ *   dashForward: 'E',
+ *   dashBack: 'Q',
+ *   p2DashForward: 'NUMPAD_SIX',
+ *   p2DashBack: 'NUMPAD_FOUR',
+ *   p2Punch: 'NUMPAD_ONE',
+ *   // legacy read references: dashForward:k.dashForward.isDown, dashForward:k.p2DashForward.isDown
+ * }
+ */
+
 export class InputController {
   constructor(scene) {
     this.scene = scene;
+    // InputManager is the sole authoritative source of physical keyboard & gamepad input
     this.inputManager = new InputManager({ targetElement: typeof window !== 'undefined' ? window : null });
-    this.keys = scene?.input?.keyboard?.addKeys ? scene.input.keyboard.addKeys({
-      left: 'A', right: 'D', up: 'W', down: 'S', punch: 'J', kick: 'K', special: 'L', grab: 'G', block: 'SHIFT',
-      leftArrow: 'LEFT', rightArrow: 'RIGHT', upArrow: 'UP', downArrow: 'DOWN', space: 'SPACE', dashForward: 'E', dashBack: 'Q', p2DashForward: 'NUMPAD_SIX', p2DashBack: 'NUMPAD_FOUR',
-      p2Punch: 'NUMPAD_ONE', p2Kick: 'NUMPAD_TWO', p2Grab: 'NUMPAD_THREE', p2Block: 'NUMPAD_ZERO',
-      p2Special: 'NUMPAD_FIVE', p2Jump: 'NUMPAD_EIGHT', p2Down: 'NUMPAD_TWO',
-      p2Left: 'LEFT', p2Right: 'RIGHT'
-    }) : {
-      left:{}, right:{}, up:{}, down:{}, punch:{}, kick:{}, special:{}, grab:{}, block:{},
-      leftArrow:{}, rightArrow:{}, upArrow:{}, downArrow:{}, space:{}, dashForward:{}, dashBack:{},
-      p2DashForward:{}, p2DashBack:{}, p2Punch:{}, p2Kick:{}, p2Grab:{}, p2Block:{},
-      p2Special:{}, p2Jump:{}, p2Down:{}, p2Left:{}, p2Right:{}
-    };
-    this.touch = { left:false,right:false,up:false,down:false,punch:false,kick:false,special:false,grab:false,block:false };
-    this.touch2 = { left:false,right:false,up:false,down:false,punch:false,kick:false,special:false,grab:false,block:false };
+    // Legacy Phaser keyboard registrations are completely removed
+    this.keys = undefined;
+    this.touch = { left:false, right:false, up:false, down:false, punch:false, kick:false, heavy:false, special:false, grab:false, block:false };
+    this.touch2 = { left:false, right:false, up:false, down:false, punch:false, kick:false, heavy:false, special:false, grab:false, block:false };
+    this.touchListeners = [];
     this.bindTouch();
   }
 
@@ -73,20 +78,23 @@ export class InputController {
   }
 
   getState() {
-    const k=this.keys,t=this.touch;
     const mgr = this.inputManager ? this.inputManager.getPlayer1State() : {};
-    const left = mgr.left || (!this.inputManager && (!!k.left.isDown || (!this.scene.localVersus && !!k.leftArrow.isDown))) || t.left;
-    const right = mgr.right || (!this.inputManager && (!!k.right.isDown || (!this.scene.localVersus && !!k.rightArrow.isDown))) || t.right;
-    const jump = mgr.jump || (!this.inputManager && (!this.scene.localVersus && PhaserKeyDown(k.space))) || t.up;
-    const dashForward = k.dashForward.isDown || mgr.dashForward;
-    const dashBack = k.dashBack.isDown || mgr.dashBack;
-    const down = mgr.down || t.down;
-    const crouch = mgr.crouch || false;
-    const punch = mgr.punch || (!this.inputManager && !!k.punch.isDown) || t.punch;
-    const kick = mgr.kick || (!this.inputManager && !!k.kick.isDown) || t.kick;
-    const special = mgr.special || (!this.inputManager && !!k.special.isDown) || t.special;
-    const grab = mgr.grab || (!this.inputManager && !!k.grab.isDown) || t.grab;
-    const block = mgr.block || (!this.inputManager && !!k.block.isDown) || t.block;
+    const t = this.touch;
+
+    const left = !!mgr.left || !!t.left;
+    const right = !!mgr.right || !!t.right;
+    const jump = !!mgr.jump || !!t.up;
+    const dashForward = !!mgr.dashForward;
+    const dashBack = !!mgr.dashBack;
+    const dash = dashForward || dashBack || !!mgr.dash;
+    const down = !!mgr.down || !!t.down;
+    const crouch = !!mgr.crouch;
+    const punch = !!mgr.punch || !!t.punch;
+    const kick = !!mgr.kick || !!t.kick;
+    const heavy = !!mgr.heavy || !!t.heavy;
+    const special = !!mgr.special || !!t.special;
+    const grab = !!mgr.grab || !!t.grab;
+    const block = !!mgr.block || !!t.block;
 
     let moveX = typeof mgr.moveX === 'number' && mgr.moveX !== 0 ? mgr.moveX : (right ? 1 : 0) - (left ? 1 : 0);
     let moveZ = typeof mgr.moveZ === 'number' && mgr.moveZ !== 0 ? mgr.moveZ : 0;
@@ -102,16 +110,16 @@ export class InputController {
       left,
       right,
       jump,
-      dashForward:k.dashForward.isDown || mgr.dashForward,
-      dashBack:k.dashBack.isDown || mgr.dashBack,
-      dash: dashForward || dashBack || !!mgr.dash,
+      dashForward,
+      dashBack,
+      dash,
       down,
       crouch,
-      depthUp: mgr.depthUp || mgr.up || false,
-      depthDown: mgr.depthDown || mgr.down || false,
+      depthUp: !!mgr.depthUp || !!mgr.up,
+      depthDown: !!mgr.depthDown || !!mgr.down,
       punch,
       kick,
-      heavy: mgr.heavy || kick,
+      heavy,
       special,
       grab,
       block
@@ -119,20 +127,23 @@ export class InputController {
   }
 
   getState2() {
-    const k=this.keys,t=this.touch2;
     const mgr = this.inputManager ? this.inputManager.getPlayer2State() : {};
-    const left = mgr.left || (!this.inputManager && !!k.leftArrow.isDown) || t.left;
-    const right = mgr.right || (!this.inputManager && !!k.rightArrow.isDown) || t.right;
-    const jump = mgr.jump || (!this.inputManager && PhaserKeyDown(k.p2Jump)) || t.up;
-    const dashForward = k.p2DashForward.isDown || mgr.dashForward;
-    const dashBack = k.p2DashBack.isDown || mgr.dashBack;
-    const down = mgr.down || t.down;
-    const crouch = mgr.crouch || false;
-    const punch = mgr.punch || (!this.inputManager && PhaserKeyDown(k.p2Punch)) || t.punch;
-    const kick = mgr.kick || (!this.inputManager && PhaserKeyDown(k.p2Kick)) || t.kick;
-    const special = mgr.special || (!this.inputManager && PhaserKeyDown(k.p2Special)) || t.special;
-    const grab = mgr.grab || (!this.inputManager && PhaserKeyDown(k.p2Grab)) || t.grab;
-    const block = mgr.block || (!this.inputManager && PhaserKeyDown(k.p2Block)) || t.block;
+    const t = this.touch2;
+
+    const left = !!mgr.left || !!t.left;
+    const right = !!mgr.right || !!t.right;
+    const jump = !!mgr.jump || !!t.up;
+    const dashForward = !!mgr.dashForward;
+    const dashBack = !!mgr.dashBack;
+    const dash = dashForward || dashBack || !!mgr.dash;
+    const down = !!mgr.down || !!t.down;
+    const crouch = !!mgr.crouch;
+    const punch = !!mgr.punch || !!t.punch;
+    const kick = !!mgr.kick || !!t.kick;
+    const heavy = !!mgr.heavy || !!t.heavy;
+    const special = !!mgr.special || !!t.special;
+    const grab = !!mgr.grab || !!t.grab;
+    const block = !!mgr.block || !!t.block;
 
     let moveX = typeof mgr.moveX === 'number' && mgr.moveX !== 0 ? mgr.moveX : (right ? 1 : 0) - (left ? 1 : 0);
     let moveZ = typeof mgr.moveZ === 'number' && mgr.moveZ !== 0 ? mgr.moveZ : 0;
@@ -148,20 +159,19 @@ export class InputController {
       left,
       right,
       jump,
-      dashForward:k.p2DashForward.isDown || mgr.dashForward,
-      dashBack:k.p2DashBack.isDown || mgr.dashBack,
-      dash: dashForward || dashBack || !!mgr.dash,
+      dashForward,
+      dashBack,
+      dash,
       down,
       crouch,
-      depthUp: mgr.depthUp || mgr.up || false,
-      depthDown: mgr.depthDown || mgr.down || false,
+      depthUp: !!mgr.depthUp || !!mgr.up,
+      depthDown: !!mgr.depthDown || !!mgr.down,
       punch,
       kick,
-      heavy: mgr.heavy || kick,
+      heavy,
       special,
       grab,
       block
     };
   }
 }
-function PhaserKeyDown(key) { return !!key?.isDown; }

@@ -80,12 +80,27 @@ export class CombatSystem {
         const scaling = target.y > 0.08
           ? Math.max(gameConfig.combat.minimumComboDamage, 1 - previousJuggle * gameConfig.combat.comboScaling)
           : 1;
-        const comboBonus = ['punch', 'kick'].includes(action.name)
+        const comboBonus = ['punch', 'kick', 'heavy'].includes(action.name)
           ? 1 + Math.min(gameConfig.combat.maxComboBonus, Math.max(0, attacker.comboCount - 1) * 0.08)
           : 1;
         const result = target.takeHit(action.damage * attacker.damageMultiplier * comboBonus * scaling, attacker.facing, action, attacker);
         if (result.damage > 0) {
-          if (action.name === 'grab') target.x += attacker.facing * 0.12;
+          if (action.name === 'grab') {
+            let gx = attacker.facingVector?.x;
+            let gz = attacker.facingVector?.z;
+            if (gx === undefined || gz === undefined) {
+              if (attacker.facingAngle !== undefined) {
+                gx = Math.sin(attacker.facingAngle);
+                gz = Math.cos(attacker.facingAngle);
+              } else {
+                gx = attacker.facing ?? 1;
+                gz = 0;
+              }
+            }
+            const gLen = Math.hypot(gx, gz) || 1;
+            target.x = Math.max(gameConfig.world.minX, Math.min(gameConfig.world.maxX, target.x + (gx / gLen) * 0.12));
+            target.z = Math.max(gameConfig.world.minZ, Math.min(gameConfig.world.maxZ, (target.z ?? 0) + (gz / gLen) * 0.12));
+          }
           if (!result.blocked && !result.perfect && target.y > 0.08) this.juggleRegistry.set(target.id, previousJuggle + 1);
           else if (!result.blocked && !result.perfect && action.launcher) {
             target.vy = gameConfig.combat.launcherVelocity;

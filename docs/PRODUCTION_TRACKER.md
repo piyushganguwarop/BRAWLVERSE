@@ -59,100 +59,26 @@
 - [x] **10 Restart Cycles Leak Verification:** 10 consecutive match reset cycles executed in browser runtime verifying 0 memory leaks, 0 growing listeners, exact fighter count retention (2), and 0 stuck input states.
 - [x] **Automated Test Suite Expansion:** 137/137 passing tests across 25 suites (including dedicated `phase1-2-input.test.js`, `phase1-2-combat3d.test.js`, and `phase1-2-asset-lifecycle.test.js`).
 
-*Exit Criteria: COMPLETE. All input conflicts eliminated, true 3D combat facing locked, asset lifecycle hardened with reference counting, 137 automated tests passing, and 11/11 browser validation checks verified in Microsoft Edge.*
+---
+
+### Phase 1.2 Final Source-Level Correction
+- [x] **Complete Removal of Legacy Phaser Key Processing:** Obsolete Phaser keyboard key objects and registrations removed from `InputController`. `InputManager` is the sole source of physical keyboard input.
+- [x] **Dash Binding Isolation:** Player 1 dash actions (`KeyE`/`KeyQ`) and Player 2 dash actions (`Numpad3`/`NumpadDecimal`) operate with total isolation. Numpad4 exclusively triggers P2 punch; Numpad6 exclusively triggers P2 heavy.
+- [x] **Full Kick & Heavy Action Pipeline Separation:** `heavy: mgr.heavy || kick` removed. `heavy` is now a fully realized combat action configured in `gameConfig.combat` (16 damage, 0.72s cooldown, 0.58s duration, 0.65 knockback, 1.5 height) with distinct animation mapping and state machine support.
+- [x] **Safe AssetLoader.clear() Lifecycle & Deferred Disposal:** `clear()` protects active instances by deferring GPU buffer disposal to `retiredAssets`, executing base geometry/texture cleanup only when the final instance releases. Cloned materials are cleanly disposed, repeated release calls are idempotent, and texture ownership is preserved.
+- [x] **3D XZ Knockback and Grab Displacement:** Normalized 3D directional vectors $(\Delta X / \text{dist}, \Delta Z / \text{dist})$ consistently applied to both knockback velocity and grab displacement on both axes, respecting arena boundaries.
+- [x] **Natural Browser Game Loop Validation:** Verified in Microsoft Edge headless that inputs naturally drive fighter positions and states across real requestAnimationFrame ticks without synthetic `scene.update()` calls.
+- [x] **Regression Test Suite:** Added `test/phase1-2-regressions.test.js` with 10 comprehensive regression tests (147/147 total unit tests passing).
+
+*Exit Criteria: COMPLETE. All Phase 1.2 input regressions, combat pipeline distinctions, and asset lifecycle edge cases verified and certified ready for Phase 2 arena construction.*
 
 ---
 
-### Phase 2: First Arena (Neon District)
-- [ ] Ground geometry with floor materials and PBR/cel-shaded textures
-- [ ] Background architecture (skyscrapers, rooftop structures, neon signs, atmospheric glow)
-- [ ] Dynamic lighting (key, fill, rim, and neon accent point lights)
-- [ ] 3D physical collision boundaries and camera containment volume
-- [ ] Spawn locations and arena reset anchors
-- [ ] LOD and draw call optimization (< 100 draw calls, < 50k triangles)
-
-*Exit Criteria: Finished Neon District arena passes visual quality standards and maintains 60 FPS on desktop / 30+ FPS on mobile.*
-
----
-
-### Phase 3: First Fighter (Quality Reference Slice)
-- [ ] Purpose-built anime-proportioned 3D fighter mesh
-- [ ] High-resolution textures, anime cel-shader material, and distinctive color palette
-- [ ] Skeletal rig with full body bones and face/hair articulators
-- [ ] 23 core animations (Idle, Walk, Run, 4-Way Move, Jump Start/Loop/Land, Crouch, Block, Perfect Block, Dodge, Punch, Kick, Heavy, Grab, Special, Hit Reaction, Knockdown, Get-up, Victory, Defeat)
-- [ ] Data-driven fighter configuration (stats, move frame data, speeds, cooldowns)
-- [ ] Selection screen preview pose and lighting
-
-*Exit Criteria: First fighter performs complete 23-animation set smoothly with zero clipping or skeletal distortion.*
-
----
-
-### Phase 4: Combat Foundation
-- [ ] 3D Hitbox and Hurtbox collision detection (spheres/boxes with depth awareness)
-- [ ] Attack state machine (Startup, Active, Recovery, Cancellation windows)
-- [ ] Defensive mechanics (Block frontal damage reduction, Perfect Block frame window, Dodge evasion)
-- [ ] Combo engine (Light chains, Heavy follow-ups, 3rd-strike launchers, air juggles with damage scaling)
-- [ ] Combat feedback (Hit-stop pause, screen shake toggle, impact sparks, audio synchronization)
-- [ ] Match rules and RoundManager integration
-
-*Exit Criteria: Two fighters can battle through a complete best-of-3 round match with responsive, deterministic hit detection.*
-
----
-
-### Phase 5: Offline Game Modes
-- [ ] Arcade Mode: 8-opponent ladder progression, difficulty ramp, boss encounter, run save/resume, completion bonus
-- [ ] Training Lab: Stationary/Guard/Attack dummy modes, infinite health/energy toggles, live damage/combo metrics, reset (`T`)
-- [ ] Local Versus: Independent P1 and P2 keyboard inputs + dedicated P2 mobile touch controls
-- [ ] Pause menu, Match results, Rematch loop, and clean scene teardown
-
-*Exit Criteria: All 3 offline game modes fully playable without memory leaks or UI glitches.*
-
----
-
-### Phase 6: Remaining Three Fighters
-- [ ] Fighter 2 (Speed / Agility archetype)
-- [ ] Fighter 3 (Power / Tank archetype)
-- [ ] Fighter 4 (Technical / Zoning archetype)
-- [ ] Signature special moves and unique animations for all 3
-- [ ] Roster balancing and data-driven attribute tuning
-
-*Exit Criteria: Complete 4-fighter roster balanced and integrated across all modes.*
-
----
-
-### Phase 7: UI & Progression
-- [ ] Cohesive anime fighting UI (Typography, Japanese-inspired minimalism, consistent button styling)
-- [ ] Main Menu, Fighter Selection with 3D previews, Arena Selection, Settings
-- [ ] Fighter Customizer (3 save slots, hair, outfits, colors, accessories)
-- [ ] Profile, Leveling, XP, Coins, and Unlocks
-- [ ] Procedural Web Audio Engine with volume buses and customized combat SFX
-
-*Exit Criteria: Full game flow navigable end-to-end without placeholder UI.*
-
----
-
-### Phase 8: Mobile & Desktop Optimization
-- [ ] Ergonomic virtual joystick and action cluster on mobile touchscreen
-- [ ] Multi-touch cancellation and landscape orientation lock
-- [ ] Resolution scaling, shadow toggles, and memory cleanup (< 150MB heap)
-- [ ] Viewport responsiveness across all 7 reference resolutions
-
-*Exit Criteria: Stable 60 FPS on desktop, stable 30-60 FPS on mobile devices.*
-
----
-
-### Phase 9: Release Preparation
-- [ ] Comprehensive test suite (> 100 passing unit/integration tests)
-- [ ] Automated source audit with 0 findings
-- [ ] Production build verification with Vite
-- [ ] Documentation, licenses, and deployment config
-
-*Exit Criteria: Release Candidate v2.0 ready for production deployment.*
-
----
-
-### Phase 10: Online Development (Post-v2 Milestone)
-- [ ] WebSocket authoritative room server
-- [ ] Server-side physics simulation and hit validation
-- [ ] Reconnection tokens and grace periods
-- [ ] Anti-cheat and server-owned progression
+### Phase 2: First Arena Production (Neon District)
+- [ ] Neon District 3D modular geometry construction
+- [ ] Anime cel-shaded materials, emission maps, and post-processing bloom
+- [ ] Ground collision mesh & authoritative physics bounds synchronization
+- [ ] Atmospheric VFX (rain particles, neon dust, volumetric fog)
+- [ ] Production lighting setup (directional sun/moon, ambient skylight, point light sources)
+- [ ] Dynamic camera tracking & framing refinement for Neon District layout
+- [ ] Performance validation: maintain stable 60 FPS on desktop and mobile targets

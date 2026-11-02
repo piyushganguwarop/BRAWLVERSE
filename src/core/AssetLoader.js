@@ -8,8 +8,9 @@ import * as THREE from 'three';
  * - Typed cache keys ('model:<url>', 'texture:<url>')
  * - Resilient failure recovery: failed requests do not permanently poison cache
  * - Reference counted model instances and safe resource ownership
+ * - Safe lifecycle handling: clear() never invalidates active instances
+ * - Deferred GPU resource disposal on final instance release after clear
  * - Event callbacks (progress, itemProgress, load, error)
- * - Safe GPU resource disposal on clear
  */
 export class AssetLoader {
   constructor() {
@@ -19,6 +20,8 @@ export class AssetLoader {
     this.loadingPromises = new Map();
     this.refCounts = new Map();
     this.instanceRegistry = new Map(); // instance scene -> cache key
+    this.retiredAssets = new Map();    // cache key -> asset deferred for disposal
+    this.pendingDisposal = new Set();  // set of cache keys queued for disposal when refCount reaches 0
     this.totalItems = 0;
     this.loadedItems = 0;
     this.failedItems = 0;
@@ -191,17 +194,23 @@ export class AssetLoader {
 
     this.instanceRegistry.set(clonedScene, key);
 
+    let released = false;
     return {
       scene: clonedScene,
       animations: gltf.animations || [],
       url,
-      release: () => this.releaseInstance(clonedScene)
+      release: () => {
+        if (released) return;
+        released = true;
+        this.releaseInstance(clonedScene);
+      }
     };
   }
 
   /**
    * Release a cloned model instance and decrement its reference count.
    * Disposes the instance's own cloned materials while keeping shared base geometry intact.
+   * Idempotent: repeated calls on the same instance are safe no-ops.
    */
   releaseInstance(instanceScene) {
     if (!instanceScene) return;
@@ -209,8 +218,6 @@ export class AssetLoader {
     if (!key) return;
 
     this.instanceRegistry.delete(instanceScene);
-    const count = Math.max(0, (this.refCounts.get(key) || 1) - 1);
-    this.refCounts.set(key, count);
 
     // Dispose instance's cloned materials (do NOT dispose shared base geometry)
     instanceScene.traverse((node) => {
@@ -218,24 +225,25 @@ export class AssetLoader {
       const mats = Array.isArray(node.material) ? node.material : [node.material];
       for (const m of mats) m?.dispose?.();
     });
+
+    const current = this.refCounts.get(key) || 1;
+    const next = Math.max(0, current - 1);
+    this.refCounts.set(key, next);
+
+    if (next === 0 && this.pendingDisposal.has(key)) {
+      this.pendingDisposal.delete(key);
+      const asset = this.cache.get(key) || this.retiredAssets.get(key);
+      this.performGpuDisposal(asset);
+      this.cache.delete(key);
+      this.retiredAssets.delete(key);
+    }
   }
 
   /**
-   * Safely dispose a cached asset and its GPU resources if no active instances exist.
-   * @param {string} url
-   * @param {string} [type='model']
+   * Internal helper to safely free GPU buffers of base geometry and unique textures.
    */
-  disposeAsset(url, type = 'model') {
-    const key = url.includes(':') ? url : `${type}:${url}`;
-    const activeRefs = this.refCounts.get(key) || 0;
-    if (activeRefs > 0) {
-      // Still referenced by an active fighter; do not invalidate active GPU geometry
-      return false;
-    }
-
-    const asset = this.cache.get(key) || this.cache.get(url);
-    if (!asset) return false;
-
+  performGpuDisposal(asset) {
+    if (!asset) return;
     if (asset.scene) {
       asset.scene.traverse((node) => {
         if (!node.isMesh) return;
@@ -243,42 +251,65 @@ export class AssetLoader {
         const mats = Array.isArray(node.material) ? node.material : [node.material];
         for (const m of mats) {
           if (!m) continue;
-          for (const v of Object.values(m)) if (v?.isTexture) v.dispose?.();
+          for (const v of Object.values(m)) {
+            if (v?.isTexture) {
+              const isShared = Array.from(this.cache.values()).some(cached => cached === v);
+              if (!isShared) v.dispose?.();
+            }
+          }
           m.dispose?.();
         }
       });
     } else if (asset.isTexture) {
       asset.dispose?.();
     }
+  }
 
+  /**
+   * Safely dispose a cached asset and its GPU resources if no active instances exist.
+   * If instances remain active, returns false and preserves resources.
+   * @param {string} url
+   * @param {string} [type='model']
+   */
+  disposeAsset(url, type = 'model') {
+    const key = url.includes(':') ? url : `${type}:${url}`;
+    const activeRefs = this.refCounts.get(key) || 0;
+    if (activeRefs > 0) {
+      return false;
+    }
+
+    const asset = this.cache.get(key) || this.cache.get(url) || this.retiredAssets.get(key);
+    if (!asset) return false;
+
+    this.performGpuDisposal(asset);
     this.cache.delete(key);
     this.cache.delete(url);
+    this.retiredAssets.delete(key);
     this.refCounts.delete(key);
+    this.pendingDisposal.delete(key);
     return true;
   }
 
+  /**
+   * Clears the asset cache and disposes unreferenced resources.
+   * Active instances are preserved: shared geometry is NEVER disposed while active instances use it.
+   * Deferred disposal is queued for active assets and executes cleanly when the last instance releases.
+   */
   clear() {
-    for (const key of Array.from(this.cache.keys())) {
-      const asset = this.cache.get(key);
-      if (asset?.scene) {
-        asset.scene.traverse((node) => {
-          if (!node.isMesh) return;
-          node.geometry?.dispose?.();
-          const mats = Array.isArray(node.material) ? node.material : [node.material];
-          for (const m of mats) {
-            if (!m) continue;
-            for (const v of Object.values(m)) if (v?.isTexture) v.dispose?.();
-            m.dispose?.();
-          }
-        });
-      } else if (asset?.isTexture) {
-        asset.dispose?.();
+    for (const [key, asset] of Array.from(this.cache.entries())) {
+      const activeRefs = this.refCounts.get(key) || 0;
+      if (activeRefs > 0) {
+        this.retiredAssets.set(key, asset);
+        this.pendingDisposal.add(key);
+        this.cache.delete(key);
+      } else {
+        this.performGpuDisposal(asset);
+        this.cache.delete(key);
+        this.refCounts.delete(key);
       }
     }
-    this.cache.clear();
+
     this.loadingPromises.clear();
-    this.refCounts.clear();
-    this.instanceRegistry.clear();
     this.totalItems = 0;
     this.loadedItems = 0;
     this.failedItems = 0;

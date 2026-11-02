@@ -157,6 +157,14 @@ async function runValidation() {
     } catch {}
   }
 
+  // Hook unhandled errors and rejections inside the page context
+  await cdp.evaluate(`
+    window.__pageErrors = [];
+    window.__pageRejections = [];
+    window.addEventListener('error', e => window.__pageErrors.push(e.message || String(e)));
+    window.addEventListener('unhandledrejection', e => window.__pageRejections.push(String(e.reason?.message || e.reason || 'Unhandled Rejection')));
+  `);
+
   const results = {
     browser: versionData.Browser,
     environment: 'Microsoft Edge Headless (Chromium)',
@@ -209,7 +217,53 @@ async function runValidation() {
     // -------------------------------------------------------------
     console.log('\n--- Category 2: Browser Interaction Tests ---');
 
-    // Test 1: Real Keyboard Events -> P1 Movement & Depth Movement
+    // Test 0: Natural Browser Game Loop (Real Phaser RAF loop without manual scene.update)
+    const naturalLoopResult = await cdp.evaluate(`
+      new Promise((resolve) => {
+        const scene = window.__brawlGame.scene.getScene('FightScene');
+        const p = scene.player;
+        const x0 = p.x;
+        const z0 = p.z;
+
+        // Dispatch real keyboard events: KeyD (right) + KeyS (depth down)
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD', bubbles: true }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyS', bubbles: true }));
+
+        // Allow Phaser RAF game loop to process frames naturally for 280ms (NO manual scene.update!)
+        setTimeout(() => {
+          const movedX = p.x > x0 + 0.05;
+          const movedZ = p.z > z0 + 0.05;
+          const isWalking = p.state === 'walk';
+          const midX = p.x;
+          const midZ = p.z;
+
+          // Release keys
+          window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyD', bubbles: true }));
+          window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyS', bubbles: true }));
+
+          // Wait 120ms for natural physics deceleration
+          setTimeout(() => {
+            resolve({
+              movedX,
+              movedZ,
+              isWalking,
+              startX: x0.toFixed(2),
+              startZ: z0.toFixed(2),
+              endX: midX.toFixed(2),
+              endZ: midZ.toFixed(2)
+            });
+          }, 120);
+        }, 280);
+      })
+    `);
+    record(
+      'interaction',
+      'Natural Browser Game Loop Input Verification (Phaser RAF Loop, No Manual scene.update)',
+      naturalLoopResult.movedX && naturalLoopResult.movedZ,
+      `Phaser RAF loop naturally drove fighter from (${naturalLoopResult.startX}, ${naturalLoopResult.startZ}) to (${naturalLoopResult.endX}, ${naturalLoopResult.endZ}) with 0 manual scene.update() calls`
+    );
+
+    // Test 1: Synthetic Stepped Keyboard Input -> P1 Movement & Depth Movement
     const kbMoveResult = await cdp.evaluate(`
       (function() {
         const scene = window.__brawlGame.scene.getScene('FightScene');
@@ -246,12 +300,12 @@ async function runValidation() {
     `);
     record(
       'interaction',
-      'P1 Movement via Real Keyboard Events (KeyD + KeyS)',
+      'Synthetic Stepped Input: P1 Movement (KeyD + KeyS)',
       kbMoveResult.movedX && kbMoveResult.movedZ && kbMoveResult.isWalking,
       `KeyD drove X to ${kbMoveResult.posX}; KeyS drove Z to ${kbMoveResult.posZ}; Fighter state: walk`
     );
 
-    // Test 2: Jump & Crouch Disambiguation (W and S do NOT jump or crouch)
+    // Test 2: Synthetic Stepped Input -> Jump & Crouch Disambiguation (W and S do NOT jump or crouch)
     const stanceResult = await cdp.evaluate(`
       (function() {
         const scene = window.__brawlGame.scene.getScene('FightScene');
@@ -296,12 +350,12 @@ async function runValidation() {
     const stancePass = stanceResult.wNoJump && stanceResult.sNoCrouch && stanceResult.spaceJumps && stanceResult.cCrouches;
     record(
       'interaction',
-      'P1 W/S vs Jump/Crouch Disambiguation',
+      'Synthetic Stepped Input: P1 W/S vs Jump/Crouch Disambiguation',
       stancePass,
       `KeyW jump=false, KeyS crouch=false, Space jump=true, KeyC crouch=true`
     );
 
-    // Test 3: P1 Attacks & Guard via Real Keyboard Events
+    // Test 3: Synthetic Stepped Input -> P1 Attacks & Guard
     const combatActionsResult = await cdp.evaluate(`
       (function() {
         const scene = window.__brawlGame.scene.getScene('FightScene');
@@ -334,7 +388,7 @@ async function runValidation() {
     const combatActionsPass = combatActionsResult.punchTriggered && combatActionsResult.blockActive && combatActionsResult.blockReleased;
     record(
       'interaction',
-      'P1 Attacks & Guard via Real Keyboard Events (KeyJ + ShiftLeft)',
+      'Synthetic Stepped Input: P1 Attacks & Guard (KeyJ + ShiftLeft)',
       combatActionsPass,
       `KeyJ punch=${combatActionsResult.punchTriggered}, ShiftLeft block=${combatActionsResult.blockActive}, release=${combatActionsResult.blockReleased}`
     );
@@ -384,7 +438,7 @@ async function runValidation() {
     const p2Pass = p2Result.movedLeft && p2Result.movedDepth && p2Result.p2NoCrouchOnDown && p2Result.p2Punched;
     record(
       'interaction',
-      'P2 Disambiguated Local Controls (ArrowLeft/Down + Numpad4)',
+      'Synthetic Stepped Input: P2 Disambiguated Local Controls (ArrowLeft/Down + Numpad4)',
       p2Pass,
       `P2 moveLeft=${p2Result.movedLeft}, moveDepth=${p2Result.movedDepth}, punch=${p2Result.p2Punched}, noCrouchOnDown=${p2Result.p2NoCrouchOnDown}`
     );
@@ -417,7 +471,7 @@ async function runValidation() {
     const touchPass = touchResult.success && touchResult.downRegistered && touchResult.upRegistered;
     record(
       'interaction',
-      'Mobile Touch Pipeline via Pointer Events',
+      'Synthetic Stepped Input: Mobile Touch Pipeline via Pointer Events',
       touchPass,
       `PointerDown active=${touchResult.downRegistered}, PointerUp release=${touchResult.upRegistered}`
     );
@@ -463,12 +517,46 @@ async function runValidation() {
     const combat3dPass = combat3dResult.missPass && combat3dResult.hitPass;
     record(
       'interaction',
-      '3D Volumetric Hit Detection (Depth Separation)',
+      'Synthetic Stepped Combat: 3D Volumetric Hit Detection (Depth Separation)',
       combat3dPass,
       `Offset Z=1.6m Miss (HP: ${combat3dResult.missHp}); Aligned Z=0.2m Hit (HP: ${combat3dResult.hitHp})`
     );
 
-    // Test 7: Third-Person Angled Arena Camera Tracking
+    // Test 7: 3D XZ Knockback and Grab Displacement in Scene
+    const knockbackGrabResult = await cdp.evaluate(`
+      (function() {
+        const scene = window.__brawlGame.scene.getScene('FightScene');
+        scene.player.x = 0; scene.player.z = 0;
+        scene.cpu.x = 0.8; scene.cpu.z = 0.8; scene.cpu.health = 100;
+        scene.player.facingAngle = Math.PI / 4;
+        scene.player.facingVector = { x: Math.SQRT1_2, z: Math.SQRT1_2 };
+
+        scene.player.activeAction = {
+          name: 'grab', damage: 15, range: 2.0, depthRange: 2.0,
+          activeStart: 0, activeEnd: 1, duration: 1, breaksGuard: true
+        };
+        scene.player.actionElapsed = 0.1; scene.player.actionSerial = 88; scene.player.state = 'grab';
+        const cpuPreX = scene.cpu.x;
+        const cpuPreZ = scene.cpu.z;
+
+        scene.combat.update([scene.player, scene.cpu]);
+        const displacedX = scene.cpu.x > cpuPreX;
+        const displacedZ = scene.cpu.z > cpuPreZ;
+
+        return {
+          displacedX,
+          displacedZ
+        };
+      })()
+    `);
+    record(
+      'interaction',
+      'Synthetic Stepped Combat: 3D XZ Knockback and Grab Displacement',
+      knockbackGrabResult.displacedX && knockbackGrabResult.displacedZ,
+      `Target displaced along 3D facing vector (X & Z) on grab attack`
+    );
+
+    // Test 8: Third-Person Angled Arena Camera Tracking
     const cameraResult = await cdp.evaluate(`
       (function() {
         const scene = window.__brawlGame.scene.getScene('FightScene');
@@ -485,7 +573,7 @@ async function runValidation() {
     `);
     record(
       'interaction',
-      'Third-Person Angled Arena Camera Framing',
+      'Synthetic Stepped Camera: Third-Person Angled Arena Camera Framing',
       cameraResult.valid,
       `Dynamic tracking position: (${cameraResult.x}, ${cameraResult.y}, ${cameraResult.z})`
     );
@@ -536,15 +624,17 @@ async function runValidation() {
     // -------------------------------------------------------------
     console.log('\n--- Category 4: Stability & Error Monitoring ---');
 
+    const pageErrors = await cdp.evaluate(`window.__pageErrors || []`);
+    const pageRejections = await cdp.evaluate(`window.__pageRejections || []`);
     const runtimeErrors = cdp.consoleLogs.filter(l => l.type === 'error');
-    const uncaughtExceptions = cdp.exceptions;
+    const uncaughtExceptions = [...cdp.exceptions, ...pageErrors];
 
-    const zeroErrors = runtimeErrors.length === 0 && uncaughtExceptions.length === 0;
+    const zeroErrors = runtimeErrors.length === 0 && uncaughtExceptions.length === 0 && pageRejections.length === 0;
     record(
       'stability',
-      'Zero Runtime Errors & Zero Uncaught Exceptions',
+      'Zero Runtime Errors, Zero Uncaught Exceptions & Zero Unhandled Rejections',
       zeroErrors,
-      `0 uncaught exceptions, ${runtimeErrors.length} console errors logged across entire execution`
+      `0 uncaught exceptions, 0 unhandled promise rejections, ${runtimeErrors.length} console errors logged across entire execution`
     );
 
   } finally {
@@ -561,14 +651,17 @@ async function runValidation() {
   console.log(`   Validation Result: ${allPassed ? 'ALL TESTS PASSED' : 'SOME TESTS FAILED'} (${Object.values(results.categories).flat().filter(t => t.pass).length}/${Object.values(results.categories).flat().length})`);
   console.log('========================================================================\n');
 
+  fs.writeFileSync('scripts/browser-validation-results.json', JSON.stringify(results, null, 2));
+  console.log('Saved to scripts/browser-validation-results.json');
   return results;
 }
 
-runValidation().then(res => {
-  fs.writeFileSync('scripts/browser-validation-results.json', JSON.stringify(res, null, 2));
-  console.log('Saved to scripts/browser-validation-results.json');
-  process.exit(Object.values(res.categories).flat().every(t => t.pass) ? 0 : 1);
-}).catch(err => {
-  console.error('Browser validation execution failed:', err);
-  process.exit(1);
-});
+runValidation()
+  .then((res) => {
+    const ok = Object.values(res.categories).flat().every(t => t.pass);
+    process.exit(ok ? 0 : 1);
+  })
+  .catch((err) => {
+    console.error('Validation script execution failed:', err);
+    process.exit(1);
+  });

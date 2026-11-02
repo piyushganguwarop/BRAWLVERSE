@@ -255,7 +255,7 @@ export class ThreeStage {
     const aliases = {
       idle: ['idle', 'breathing', 'stand'], walk: ['walk', 'run', 'locomotion'],
       jump: ['jump', 'air'], crouch: ['crouch', 'duck'], block: ['block', 'guard'],
-      punch: ['punch', 'jab', 'light_attack'], kick: ['kick', 'heavy_attack'],
+      punch: ['punch', 'jab', 'light_attack'], kick: ['kick'], heavy: ['heavy', 'heavy_attack', 'slam', 'smash', 'kick'],
       grab: ['grab', 'throw'], special: ['special', 'ultimate', 'skill'],
       hit: ['hit', 'hurt', 'damage'], ko: ['ko', 'knockout', 'death'], victory: ['victory', 'win']
     };
@@ -340,6 +340,12 @@ export class ThreeStage {
       m.legR.rotation.x = -1.18 - pulse * 0.08;
       m.armL.rotation.x = -0.9; m.armR.rotation.x = -0.9;
       m.torso.rotation.z = 0.10;
+    } else if (state === 'heavy') {
+      m.armR.rotation.x = -2.2 - pulse * 0.12;
+      m.armL.rotation.x = -1.2;
+      m.torso.rotation.x = -0.22;
+      m.torso.rotation.y = -0.32;
+      m.torso.rotation.z = -0.15;
     } else if (state === 'grab') {
       m.armL.rotation.x = -1.45; m.armR.rotation.x = -1.45;
       m.armL.rotation.z = 0.18; m.armR.rotation.z = -0.18;
