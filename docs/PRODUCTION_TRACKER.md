@@ -50,6 +50,19 @@
 
 ---
 
+### Phase 1.2: Complete Input, 3D Combat and Asset Lifecycle Hardening
+- [x] **Disambiguated Input Bindings:** Eliminated all overlapping actions for Player 2 (Numpad 0/1/3/Decimal/4/5/6/7/8/9 with navigation cluster fallback); completely separated W/S depth motion from Jump/Crouch actions.
+- [x] **Single Source of Truth:** `InputManager` acts as the sole authoritative logical input pipeline; `InputController` exposes unified states without duplicate physical key processing or sticky states.
+- [x] **True 3D Facing & Combat Alignment:** Planar vector dot product checks ($\vec{F}_{\text{attacker}} \cdot \vec{D}_{\text{target}} \ge 0.20$); rear strikes cleanly miss; directional 3D block validation ($\vec{F}_{\text{defender}} \cdot \vec{U}_{\text{toAttacker}} \ge 0.20$); close-contact hysteresis deadzone ($< 0.18\text{m}$) prevents erratic flipping.
+- [x] **Asset Loader Cache & Lifecycle Hardening:** In-flight request deduplication via `loadingPromises`; typed cache keys (`model:*`, `texture:*`); transient failure recovery without permanent cache poisoning; reference-counted model instances with isolated material cloning and safe GPU disposal.
+- [x] **Real Browser Event Validation:** Enhanced CDP test suite using real `KeyboardEvent` and `PointerEvent` dispatches, verifying the complete pipeline from browser event to rendered Three.js movement.
+- [x] **10 Restart Cycles Leak Verification:** 10 consecutive match reset cycles executed in browser runtime verifying 0 memory leaks, 0 growing listeners, exact fighter count retention (2), and 0 stuck input states.
+- [x] **Automated Test Suite Expansion:** 137/137 passing tests across 25 suites (including dedicated `phase1-2-input.test.js`, `phase1-2-combat3d.test.js`, and `phase1-2-asset-lifecycle.test.js`).
+
+*Exit Criteria: COMPLETE. All input conflicts eliminated, true 3D combat facing locked, asset lifecycle hardened with reference counting, 137 automated tests passing, and 11/11 browser validation checks verified in Microsoft Edge.*
+
+---
+
 ### Phase 2: First Arena (Neon District)
 - [ ] Ground geometry with floor materials and PBR/cel-shaded textures
 - [ ] Background architecture (skyscrapers, rooftop structures, neon signs, atmospheric glow)

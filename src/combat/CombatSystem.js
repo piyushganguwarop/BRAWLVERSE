@@ -9,7 +9,7 @@ export class CombatSystem {
 
   /**
    * Deterministic 3D volumetric hit check between attacker's active action and target.
-   * Checks horizontal range (X), depth range (Z), vertical reach (Y), and facing direction.
+   * Checks horizontal range (X), depth range (Z), vertical reach (Y), and true 3D facing alignment.
    */
   check3DHit(attacker, action, target) {
     if (!attacker || !action || !target) return false;
@@ -17,13 +17,49 @@ export class CombatSystem {
     const dy = target.y - attacker.y;
     const dz = (target.z ?? 0) - (attacker.z ?? 0);
 
-    const horizontalDistance = Math.abs(dx);
-    const inFront = Math.sign(dx) === attacker.facing || (horizontalDistance < 0.25 && Math.abs(dz) < 0.35);
-    const depthDistance = Math.abs(dz);
-    const depthReach = action.depthRange ?? action.depth ?? gameConfig.combat.defaultDepthRange ?? 0.85;
+    // 1. Vertical reach check
     const verticalOverlap = Math.abs(dy) <= (action.height ?? 1.5);
+    if (!verticalOverlap) return false;
 
-    return inFront && horizontalDistance <= action.range && depthDistance <= depthReach && verticalOverlap;
+    // 2. Horizontal and Depth reach
+    const horizontalDistance = Math.abs(dx);
+    const depthDistance = Math.abs(dz);
+    const maxRange = action.range ?? 1.2;
+    const depthReach = action.depthRange ?? action.depth ?? gameConfig.combat.defaultDepthRange ?? 0.85;
+
+    if (horizontalDistance > maxRange || depthDistance > depthReach) return false;
+
+    const planarDist = Math.hypot(dx, dz);
+    if (planarDist > maxRange) return false;
+
+    // 3. Directional Alignment (Facing check in 3D XZ plane)
+    if (action.omniDirectional) return true;
+
+    // Close contact range deadzone: if target is within 0.22m, hits can connect
+    if (planarDist < 0.22) return true;
+
+    let fx = attacker.facingVector?.x;
+    let fz = attacker.facingVector?.z;
+    if (fx === undefined || fz === undefined) {
+      if (attacker.facingAngle !== undefined) {
+        fx = Math.sin(attacker.facingAngle);
+        fz = Math.cos(attacker.facingAngle);
+      } else {
+        fx = attacker.facing ?? 1;
+        fz = 0;
+      }
+    }
+
+    // Direction vector to target
+    const tx = dx / planarDist;
+    const tz = dz / planarDist;
+
+    // Vector dot product alignment
+    const dot = fx * tx + fz * tz;
+
+    // Target must be in the attacker's front field of view (cone >= ~78 degrees)
+    // Attacks directly behind (dot < 0) will miss!
+    return dot >= 0.20;
   }
 
   update(fighters) {
@@ -47,7 +83,7 @@ export class CombatSystem {
         const comboBonus = ['punch', 'kick'].includes(action.name)
           ? 1 + Math.min(gameConfig.combat.maxComboBonus, Math.max(0, attacker.comboCount - 1) * 0.08)
           : 1;
-        const result = target.takeHit(action.damage * attacker.damageMultiplier * comboBonus * scaling, attacker.facing, action);
+        const result = target.takeHit(action.damage * attacker.damageMultiplier * comboBonus * scaling, attacker.facing, action, attacker);
         if (result.damage > 0) {
           if (action.name === 'grab') target.x += attacker.facing * 0.12;
           if (!result.blocked && !result.perfect && target.y > 0.08) this.juggleRegistry.set(target.id, previousJuggle + 1);

@@ -223,9 +223,11 @@ export class ThreeStage {
     if (character.model) {
       assetLoader.instantiateModel(character.model).then((inst) => {
         if (!inst || !this.fighters.has(id)) {
-          if (inst?.scene) disposeResources(inst.scene);
+          if (inst?.release) inst.release();
+          else if (inst?.scene) disposeResources(inst.scene);
           return;
         }
+        model.instance = inst;
         const visual = inst.scene;
         const bounds = new THREE.Box3().setFromObject(visual);
         const size = bounds.getSize(new THREE.Vector3());
@@ -398,9 +400,23 @@ export class ThreeStage {
 
   setFighters(fighters) { this.currentFighters = Object.fromEntries(fighters.map(f => [f.id, f])); }
 
+  removeFighter(id) {
+    const model = this.fighters.get(id);
+    if (!model) return;
+    if (model.instance?.release) {
+      model.instance.release();
+    }
+    this.scene.remove(model.root);
+    disposeResources(model.proceduralRoot);
+    this.fighters.delete(id);
+  }
+
   destroy() {
     cancelAnimationFrame(this.raf);
     this.resizeObserver?.disconnect();
+    for (const model of this.fighters.values()) {
+      if (model.instance?.release) model.instance.release();
+    }
     disposeResources(this.scene);
     this.fighters.clear();
     this.renderer.dispose();

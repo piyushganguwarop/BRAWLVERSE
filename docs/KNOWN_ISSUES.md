@@ -39,3 +39,11 @@ The following items are intentional scope boundaries or work-in-progress compone
 - [x] **Uncoordinated Asset Loading:** `ThreeStage` and UI components now route all GLTF/texture loading through the centralized `AssetLoader`.
 - [x] **Contradictory Arena Bounds:** All modules (`Fighter`, `ArenaCamera`, `ThreeStage`) now reference `gameConfig.world` as the single authoritative source of truth.
 - [x] **InputManager Disconnection:** `InputManager` is now fully integrated into `InputController` and actively drives `FightScene` in the browser.
+
+## 3. Resolved in Phase 1.2
+- [x] **Player 2 Input Conflicts:** Eliminated all overlapping keys for Player 2 (Numpad actions 0, 1, 3, Decimal, 4, 5, 6, 7, 8, 9 with distinct navigation cluster fallback).
+- [x] **Player 1 W/S Motion vs Jump/Crouch Collision:** `KeyW` and `KeyS` strictly modulate depth movement (`moveZ`) and never trigger jump or crouch.
+- [x] **Duplicate Input Processing:** `InputManager` established as the single authoritative logical input source.
+- [x] **1D Facing in 3D Space:** Implemented 3D vector dot product alignment for directional attacks and blocking; rear attacks cleanly bypass guard.
+- [x] **Close-Contact Facing Jitter:** Added contact hysteresis deadzone (< 0.18m) preventing erratic flipping when fighters are in close quarters.
+- [x] **Shared GLTF Resource Disposals:** Hardened `AssetLoader` with in-flight request deduplication, typed caching, reference-counted instances with isolated material clones, and safe GPU memory release.

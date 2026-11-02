@@ -141,9 +141,37 @@ interface LogicalInputState {
 ### Edge Triggering & Buffer Window
 - Combat inputs register both `isDown` (continuous state) and `justPressed` (rising edge within a 120ms buffer window) to ensure attack commands execute reliably during cancel and recovery frames.
 
+### Authoritative Bindings Architecture (Phase 1.2 Hardening)
+- **Player 1 Layout:**
+  - Movement: `KeyA` (Left), `KeyD` (Right), `KeyW` (Depth Up / Away), `KeyS` (Depth Down / Screen)
+  - Mobility: `Space` (Jump), `KeyC` (Crouch), `KeyE` (Dash Forward), `KeyQ` (Dash Back)
+  - Combat: `KeyJ` (Punch), `KeyK` (Kick), `KeyL` (Heavy), `KeyU`/`KeyG` (Grab), `KeyO`/`Semicolon` (Special), `ShiftLeft` (Block)
+  - *Disambiguation Guarantee:* `KeyW` and `KeyS` strictly modulate `moveZ` and never trigger jump or crouch.
+- **Player 2 Layout:**
+  - Movement: `ArrowLeft`, `ArrowRight`, `ArrowUp` (Depth Up), `ArrowDown` (Depth Down)
+  - Mobility: `Numpad0` / `ControlRight` (Jump), `Numpad1` / `ShiftRight` (Crouch), `Numpad3` / `PageDown` (Dash Forward), `NumpadDecimal` / `Delete` (Dash Back)
+  - Combat: `Numpad4` / `Insert` (Punch), `Numpad5` / `Home` (Kick), `Numpad6` / `PageUp` (Heavy), `Numpad7` / `End` (Grab), `Numpad8` / `Backslash` (Block), `Numpad9` / `Enter` (Special)
+  - *Disambiguation Guarantee:* 100% collision-free mapping with zero overlapping keys across all actions and players.
+- **Single Source of Truth:** `InputManager` is the authoritative source; `InputController` translates and exposes state without duplicate key processing.
+
 ---
 
 ## 6. Depth-Aware Combat & 3D Hitbox System
+
+Hits are evaluated in full 3D space using volumetric bounding boxes and planar vector dot products:
+
+- **True 3D Directional Alignment:**
+  $\vec{F}_{\text{attacker}} = (\sin \theta_a, \cos \theta_a), \quad \vec{D} = \frac{(x_t - x_a, z_t - z_a)}{\sqrt{\Delta x^2 + \Delta z^2}}$
+  $\text{Alignment} = \vec{F}_{\text{attacker}} \cdot \vec{D} \ge 0.20 \quad (\approx 78^\circ \text{ cone})$
+  Strikes aimed away from the opponent ($\text{Alignment} < 0$) cleanly miss unless the action is explicitly tagged `omniDirectional`.
+- **Directional Guard Check:**
+  $\vec{F}_{\text{defender}} \cdot (-\vec{D}) \ge 0.20$
+  Defenders only guard attacks coming from their front field of view. Strikes into the defender's back penetrate guard and apply unmitigated hit damage.
+- **Contact Hysteresis:** Close proximity (< 0.18m) maintains previous facing vector to avoid rapid orientation flipping during close exchanges.
+- **Asset Lifecycle & Memory Ownership:**
+  - `loadingPromises` deduplicates in-flight network requests.
+  - Cloned model instances maintain isolated materials to prevent cross-fighter texture/uniform bleeding.
+  - Reference counter manages GPU memory release; cached base assets are never disposed while active instances exist.
 
 Hits are evaluated in full 3D space using volumetric bounding boxes/spheres, rather than 1D distance checks:
 

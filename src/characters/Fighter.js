@@ -20,7 +20,8 @@ export class Fighter {
     this.comboScale = 1; this.juggleHits = 0; this.launcher = false;
     this.blocking = false; this.crouching = false; this.hitFlash = 0;
     this.dashCooldown = 0; this.dashTime = 0; this.dashDirection = 0; this.dashDirectionZ = 0; this.airAttackUsed = false;
-    this.facingAngle = facing === 1 ? 0 : Math.PI;
+    this.facingAngle = facing === 1 ? Math.PI / 2 : -Math.PI / 2;
+    this.facingVector = { x: facing === 1 ? 1 : -1, z: 0 };
     this.invulnerable = 0; this.knockbackVelocity = 0; this.perfectBlock = false; this.blockAge = 999;
   }
 
@@ -53,15 +54,19 @@ export class Fighter {
       const requested = input.dashForward ? 1 : input.dashBack ? -1 : 0;
       if (requested || input.dash) {
         if (requested) {
-          this.dashDirection = requested * this.facing;
-          this.dashDirectionZ = 0;
+          const fx = this.facingVector ? this.facingVector.x : this.facing;
+          const fz = this.facingVector ? this.facingVector.z : 0;
+          this.dashDirection = requested * fx;
+          this.dashDirectionZ = requested * fz;
         } else if (typeof input.moveX === 'number' && typeof input.moveZ === 'number' && (input.moveX !== 0 || input.moveZ !== 0)) {
           const dashLen = Math.hypot(input.moveX, input.moveZ) || 1;
           this.dashDirection = input.moveX / dashLen;
           this.dashDirectionZ = input.moveZ / dashLen;
         } else {
-          this.dashDirection = this.facing;
-          this.dashDirectionZ = 0;
+          const fx = this.facingVector ? this.facingVector.x : this.facing;
+          const fz = this.facingVector ? this.facingVector.z : 0;
+          this.dashDirection = fx;
+          this.dashDirectionZ = fz;
         }
         this.dashTime = 0.16;
         this.dashCooldown = 0.62;
@@ -76,7 +81,7 @@ export class Fighter {
       this.z += this.vz * dt;
     }
     this.blocking = !locked && !!input.block && this.y <= 0.02;
-    this.crouching = !locked && !!input.down && !this.blocking && this.y <= 0.02;
+    this.crouching = !locked && (!!input.crouch || (!input.moveZ && !input.depthDown && !input.moveX && !input.right && !input.left && !!input.down)) && !this.blocking && this.y <= 0.02;
 
     if (!locked && !this.blocking && this.dashTime <= 0) {
       let dirX = typeof input.moveX === 'number' && input.moveX !== 0 ? input.moveX : (input.right ? 1 : 0) - (input.left ? 1 : 0);
@@ -120,10 +125,18 @@ export class Fighter {
     if (!target) return;
     const dx = target.x - this.x;
     const dz = (target.z ?? 0) - (this.z ?? 0);
+    const dist = Math.hypot(dx, dz);
+    // Contact deadzone: maintain current facing to prevent erratic flipping at close range (< 0.18m)
+    if (dist < 0.18) return;
+
+    this.facingAngle = Math.atan2(dx, dz);
     if (Math.abs(dx) > 0.05) {
       this.facing = dx >= 0 ? 1 : -1;
     }
-    this.facingAngle = Math.atan2(dx, dz);
+    this.facingVector = {
+      x: Math.sin(this.facingAngle),
+      z: Math.cos(this.facingAngle)
+    };
   }
 
   startAction(name) {
@@ -153,9 +166,29 @@ export class Fighter {
     return true;
   }
 
-  takeHit(damage, attackerFacing, spec = {}) {
+  takeHit(damage, attackerFacing, spec = {}, attacker = null) {
     if (this.invulnerable > 0 || this.health <= 0) return { damage: 0, blocked: false, perfect: false };
-    const facingAttacker = this.facing === -attackerFacing;
+    let facingAttacker = false;
+    if (attacker && typeof attacker.x === 'number') {
+      const dx = attacker.x - this.x;
+      const dz = (attacker.z ?? 0) - (this.z ?? 0);
+      const dist = Math.hypot(dx, dz);
+      if (dist > 0.05) {
+        let fx = this.facingVector?.x;
+        let fz = this.facingVector?.z;
+        if (fx === undefined || fz === undefined) {
+          fx = this.facingAngle !== undefined ? Math.sin(this.facingAngle) : this.facing;
+          fz = this.facingAngle !== undefined ? Math.cos(this.facingAngle) : 0;
+        }
+        const dot = fx * (dx / dist) + fz * (dz / dist);
+        // Defender faces toward incoming attacker if alignment is within front cone (>= 0.20)
+        facingAttacker = dot >= 0.20;
+      } else {
+        facingAttacker = this.facing === -attackerFacing;
+      }
+    } else {
+      facingAttacker = this.facing === -attackerFacing;
+    }
     const guarding = this.blocking && facingAttacker && this.y <= 0.02;
     const perfect = guarding && this.blockAge <= gameConfig.combat.perfectBlockWindow;
     const blocked = guarding && !spec.breaksGuard;

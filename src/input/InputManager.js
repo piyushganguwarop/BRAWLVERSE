@@ -8,7 +8,9 @@ export function createLogicalInputState() {
     left: false,
     right: false,
     up: false,           // Depth Up
-    down: false,         // Depth Down / Crouch
+    down: false,         // Depth Down
+    depthUp: false,      // Explicit 3D Depth Up
+    depthDown: false,    // Explicit 3D Depth Down
     jump: false,         // Ground jump / Air jump
     crouch: false,       // Low stance
     dash: false,         // Evasive dash
@@ -101,24 +103,27 @@ export class InputManager {
       heavy: ['KeyL'],
       grab: ['KeyU', 'KeyG'],
       special: ['KeyO', 'Semicolon'],
-      block: ['ShiftLeft', 'KeyI']
+      block: ['ShiftLeft']
     };
 
+    // Player 2 Bindings: Completely disambiguated layout
+    // Primary: Standard Numpad + Arrow keys (No overlapping actions!)
+    // Fallback: Navigation cluster for keyboards without a numeric keypad
     this.bindingsP2 = {
       left: ['ArrowLeft'],
       right: ['ArrowRight'],
       depthUp: ['ArrowUp'],
       depthDown: ['ArrowDown'],
-      jump: ['Numpad0', 'Enter'],
-      crouch: ['Numpad1'],
-      dashForward: ['Numpad6'],
-      dashBack: ['Numpad4'],
-      punch: ['Numpad4', 'Digit4'],
-      kick: ['Numpad5', 'Digit5'],
-      heavy: ['Numpad6', 'Digit6'],
-      grab: ['Numpad7', 'Digit7'],
-      special: ['Numpad9', 'Numpad5'],
-      block: ['Numpad0', 'Numpad8']
+      jump: ['Numpad0', 'ControlRight', 'NumpadEnter'],
+      crouch: ['Numpad1', 'ShiftRight'],
+      dashForward: ['Numpad3', 'PageDown'],
+      dashBack: ['NumpadDecimal', 'Delete'],
+      punch: ['Numpad4', 'Insert'],
+      kick: ['Numpad5', 'Home'],
+      heavy: ['Numpad6', 'PageUp'],
+      grab: ['Numpad7', 'End'],
+      block: ['Numpad8', 'Backslash'],
+      special: ['Numpad9', 'Enter']
     };
 
     this.onKeyDown = this.onKeyDown.bind(this);
@@ -249,8 +254,8 @@ export class InputManager {
 
     // Movement Z (Depth)
     let moveZ = 0;
-    if (k('depthDown') || t.down) moveZ += 1.0;
-    if (k('depthUp') || t.up) moveZ -= 1.0;
+    if (k('depthDown') || t.depthDown || t.down) moveZ += 1.0;
+    if (k('depthUp') || t.depthUp || t.up) moveZ -= 1.0;
     if (pad) {
       if (pad.dpadDown) moveZ += 1.0;
       if (pad.dpadUp) moveZ -= 1.0;
@@ -259,19 +264,30 @@ export class InputManager {
     state.moveZ = Math.max(-1.0, Math.min(1.0, moveZ));
     state.up = state.moveZ < -0.2;
     state.down = state.moveZ > 0.2;
+    state.depthUp = state.up;
+    state.depthDown = state.down;
 
     // Actions
-    state.jump = k('jump') || !!t.jump || !!pad?.jump || this.buffers.p1.consume('jump');
-    state.crouch = k('crouch') || (state.moveZ > 0.5 && !state.jump) || !!t.crouch;
-    state.dashForward = k('dashForward') || this.buffers.p1.consume('dashForward') || !!t.dashForward;
-    state.dashBack = k('dashBack') || this.buffers.p1.consume('dashBack') || !!t.dashBack;
+    const act = action => {
+      const active = k(action) || !!t[action] || !!pad?.[action];
+      if (active) {
+        this.buffers.p1.consume(action);
+        return true;
+      }
+      return this.buffers.p1.consume(action);
+    };
+
+    state.jump = act('jump');
+    state.crouch = k('crouch') || !!t.crouch || !!pad?.crouch;
+    state.dashForward = act('dashForward');
+    state.dashBack = act('dashBack');
     state.dash = state.dashForward || state.dashBack || !!pad?.dash || !!t.dash;
 
-    state.punch = k('punch') || !!t.punch || !!pad?.punch || this.buffers.p1.consume('punch');
-    state.kick = k('kick') || !!t.kick || !!pad?.kick || this.buffers.p1.consume('kick');
-    state.heavy = k('heavy') || !!t.heavy || !!pad?.heavy || this.buffers.p1.consume('heavy');
-    state.grab = k('grab') || !!t.grab || !!pad?.grab || this.buffers.p1.consume('grab');
-    state.special = k('special') || !!t.special || !!pad?.special || this.buffers.p1.consume('special');
+    state.punch = act('punch');
+    state.kick = act('kick');
+    state.heavy = act('heavy');
+    state.grab = act('grab');
+    state.special = act('special');
     state.block = k('block') || !!t.block || !!pad?.block;
 
     return state;
@@ -301,8 +317,8 @@ export class InputManager {
 
     // Movement Z (Depth)
     let moveZ = 0;
-    if (k('depthDown') || t.down) moveZ += 1.0;
-    if (k('depthUp') || t.up) moveZ -= 1.0;
+    if (k('depthDown') || t.depthDown || t.down) moveZ += 1.0;
+    if (k('depthUp') || t.depthUp || t.up) moveZ -= 1.0;
     if (pad) {
       if (pad.dpadDown) moveZ += 1.0;
       if (pad.dpadUp) moveZ -= 1.0;
@@ -311,19 +327,30 @@ export class InputManager {
     state.moveZ = Math.max(-1.0, Math.min(1.0, moveZ));
     state.up = state.moveZ < -0.2;
     state.down = state.moveZ > 0.2;
+    state.depthUp = state.up;
+    state.depthDown = state.down;
 
     // Actions
-    state.jump = k('jump') || !!t.jump || !!pad?.jump || this.buffers.p2.consume('jump');
-    state.crouch = k('crouch') || (state.moveZ > 0.5 && !state.jump) || !!t.crouch;
-    state.dashForward = k('dashForward') || this.buffers.p2.consume('dashForward') || !!t.dashForward;
-    state.dashBack = k('dashBack') || this.buffers.p2.consume('dashBack') || !!t.dashBack;
+    const act = action => {
+      const active = k(action) || !!t[action] || !!pad?.[action];
+      if (active) {
+        this.buffers.p2.consume(action);
+        return true;
+      }
+      return this.buffers.p2.consume(action);
+    };
+
+    state.jump = act('jump');
+    state.crouch = k('crouch') || !!t.crouch || !!pad?.crouch;
+    state.dashForward = act('dashForward');
+    state.dashBack = act('dashBack');
     state.dash = state.dashForward || state.dashBack || !!pad?.dash || !!t.dash;
 
-    state.punch = k('punch') || !!t.punch || !!pad?.punch || this.buffers.p2.consume('punch');
-    state.kick = k('kick') || !!t.kick || !!pad?.kick || this.buffers.p2.consume('kick');
-    state.heavy = k('heavy') || !!t.heavy || !!pad?.heavy || this.buffers.p2.consume('heavy');
-    state.grab = k('grab') || !!t.grab || !!pad?.grab || this.buffers.p2.consume('grab');
-    state.special = k('special') || !!t.special || !!pad?.special || this.buffers.p2.consume('special');
+    state.punch = act('punch');
+    state.kick = act('kick');
+    state.heavy = act('heavy');
+    state.grab = act('grab');
+    state.special = act('special');
     state.block = k('block') || !!t.block || !!pad?.block;
 
     return state;

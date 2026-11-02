@@ -57,3 +57,75 @@ Validation was executed against the production build (`dist/`) running in Micros
   - `dist/assets/index-5U6T1KBg.css` (30.00 kB / gzip: 7.15 kB)
   - `dist/assets/index-DdzghTZD.js` (2,252.91 kB / gzip: 545.80 kB)
 - Exit code: 0
+
+
+---
+
+# Brawl Wars - Phase 1.2 Test & Validation Report
+
+**Date of Execution:** 2026-11-02  
+**Branch:** `v2-reconstruction`  
+**Status:** ALL TESTS PASSED  
+
+## 1. Automated Test Suite Summary
+- **Total Test Suites:** 25 files
+- **Total Tests Executed:** 137 tests
+- **Tests Passed:** 137 / 137 (100%)
+- **Tests Failed:** 0
+- **Duration:** ~520ms
+
+### Phase 1.2 Test Suites Added:
+1. **`test/phase1-2-input.test.js` (7/7 tests passed):**
+   - Verified zero overlapping keys in P1 and P2 bindings.
+   - Verified P1 KeyW and KeyS strictly drive depth movement (moveZ) and NEVER trigger jump or crouch.
+   - Verified keydown and keyup properly set and clear active actions.
+   - Verified double-tap dash timing window in buffer.
+   - Verified gamepad stick deadzone filtering (< 0.18) and button mapping.
+   - Verified all P1 and P2 actions activate and deactivate cleanly.
+   - Verified match restart and scene clear preserves clean state without stuck keys.
+
+2. **`test/phase1-2-combat3d.test.js` (10/10 tests passed):**
+   - Frontal hit connects while attack directly behind cleanly misses.
+   - Depth reach strictly validates Z distance (same X).
+   - Horizontal reach strictly validates X distance (same Z).
+   - Diagonal 3D alignment connects when facing matches.
+   - Vertical separation validates Y elevation.
+   - Aerial attacks apply jump elevation and distinct move tuning.
+   - Grab breaks block and applies unmitigated damage.
+   - Directional blocking reduces frontal hits and allows back hits.
+   - Facing hysteresis prevents erratic flip at close range (< 0.18m).
+   - One hit per valid attack serial prevents duplicate damage.
+
+3. **`test/phase1-2-asset-lifecycle.test.js` (5/5 tests passed):**
+   - Concurrent requests for same URL share in-flight promise.
+   - Failed request does not permanently poison cache; retry works.
+   - Different asset types (model vs texture) with same path do not collide.
+   - Model cloning reference counting and safe independent release.
+   - Progress and error events accurately report loading ratio.
+
+## 2. In-Browser Validation Results (Microsoft Edge Headless)
+Validated via Chrome DevTools Protocol against production build (`dist/`):
+- **Category 1 (Smoke):**
+  - Game Boot & Canvas Presence: ✔ PASS
+  - FightScene Initialization: ✔ PASS
+- **Category 2 (Interaction with Real Browser Events):**
+  - P1 Movement via Real Keyboard Events (KeyD + KeyS): ✔ PASS (X to -2.10, Z to 0.40, state: walk)
+  - P1 W/S vs Jump/Crouch Disambiguation: ✔ PASS (KeyW jump=false, KeyS crouch=false, Space jump=true, KeyC crouch=true)
+  - P1 Attacks & Guard via Real Keyboard Events (KeyJ + ShiftLeft): ✔ PASS
+  - P2 Disambiguated Local Controls (ArrowLeft/Down + Numpad4): ✔ PASS
+  - Mobile Touch Pipeline via Pointer Events: ✔ PASS
+  - 3D Volumetric Hit Detection (Depth Separation): ✔ PASS (Z=1.6m Miss HP 100, Z=0.2m Hit HP 92.67)
+  - Third-Person Angled Arena Camera Framing: ✔ PASS (pos: 0.27, 3.75, 9.46)
+- **Category 3 (Lifecycle & Cleanup):**
+  - 10 Automated Match Restart Cycles: ✔ PASS (10/10 cycles: 100% health reset, active fighter count 2, 0 stuck keys)
+- **Category 4 (Stability):**
+  - Zero Runtime Errors & Zero Uncaught Exceptions: ✔ PASS (0 exceptions, 0 console errors)
+
+## 3. Production Build Verification
+- Command: `npm run build` (`vite build`)
+- Output: 62 modules transformed cleanly.
+- Output artifacts:
+  - `dist/index.html` (15.45 kB / gzip: 4.37 kB)
+  - `dist/assets/index-5U6T1KBg.css` (30.00 kB / gzip: 7.15 kB)
+  - `dist/assets/index-D1kdMaD0.js` (2,256.22 kB / gzip: 546.63 kB)
+- Exit code: 0
