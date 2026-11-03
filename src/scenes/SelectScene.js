@@ -200,11 +200,32 @@ export class SelectScene extends Phaser.Scene {
     const hex = value => `#${Number(value ?? 0).toString(16).padStart(6, '0').slice(-6)}`;
     const name = document.getElementById('selection-preview-name');
     if (name) name.textContent = fighter.name;
+    const isVolt = fighter.id === 'volt';
+    const isRook = fighter.id === 'rook';
+    const isMyst = fighter.id === 'myst';
     this.selectionPreview.update({
-      name: fighter.name, color: hex(fighter.color), accent: hex(fighter.accent), skin: hex(fighter.skin), hair: hex(fighter.hair),
-      bottomColor: '#202a3b', eyeColor: '#171b24', build: fighter.style === 'tank' || fighter.style === 'power' ? 'bulky' : 'athletic',
-      height: 100, width: 100, legs: 100, muscle: fighter.style === 'tank' || fighter.style === 'power' ? 78 : 52,
-      hairStyle: 'short', face: 'oval', brows: 'normal', beard: 'none', top: 'tee', bottom: 'pants', gloves: 'wraps', shoes: 'high', accessory: 'none', outfit: 'classic'
+      name: fighter.name,
+      color: hex(fighter.color),
+      accent: hex(fighter.accent),
+      skin: hex(fighter.skin),
+      hair: hex(fighter.hair),
+      bottomColor: isVolt ? '#1b2234' : isRook ? '#1f2937' : isMyst ? '#221a30' : '#202a3b',
+      eyeColor: isVolt ? '#a6ff00' : isRook ? '#ff2040' : isMyst ? '#42d8c5' : '#171b24',
+      build: isRook ? 'bulky' : isVolt || isMyst ? 'slim' : 'athletic',
+      height: isRook ? 114 : isMyst ? 98 : isVolt ? 96 : 100,
+      width: isRook ? 116 : isVolt ? 94 : isMyst ? 96 : 100,
+      legs: isVolt ? 104 : isRook ? 100 : 100,
+      muscle: isRook ? 90 : isVolt ? 45 : isMyst ? 35 : 68,
+      hairStyle: isVolt ? 'spiky' : isMyst ? 'long' : 'short',
+      face: isRook ? 'square' : isMyst ? 'oval' : 'oval',
+      brows: isRook ? 'strong' : 'normal',
+      beard: 'none',
+      top: isRook ? 'vest' : isVolt ? 'jacket' : isMyst ? 'hoodie' : 'tee',
+      bottom: 'pants',
+      gloves: isRook ? 'boxing' : 'wraps',
+      shoes: isMyst ? 'light' : 'boots',
+      accessory: isVolt ? 'headband' : isRook || isMyst ? 'mask' : 'none',
+      outfit: isMyst ? 'street' : 'combat'
     });
   }
 
@@ -237,13 +258,16 @@ export class SelectScene extends Phaser.Scene {
   createCards() {
     roster.forEach((fighter, index) => {
       const card = this.add.container(0, 0);
+      const isRook = fighter.id === 'rook';
+      const isVolt = fighter.id === 'volt';
+      const isMyst = fighter.id === 'myst';
       const bg = this.add.rectangle(0, 0, 150, 190, COLORS.panel).setStrokeStyle(1, 0x343d52);
       const portrait = this.add.rectangle(0, -30, 116, 112, fighter.color, 1).setStrokeStyle(1, fighter.accent);
       const glow = this.add.circle(0, -32, 31, fighter.accent, 0.14);
-      const head = this.add.circle(0, -39, 23, fighter.skin ?? 0xc98f68);
-      const hair = this.add.ellipse(0, -52, 48, 22, fighter.hair ?? 0x20232c);
-      const shoulders = this.add.ellipse(0, 2, 76, 38, fighter.accent, 1);
-      const torso = this.add.rectangle(0, 4, 54, 42, fighter.color, 1);
+      const shoulders = this.add.ellipse(0, 2, isRook ? 94 : isVolt ? 68 : isMyst ? 66 : 76, isRook ? 44 : 38, fighter.accent, 1);
+      const torso = this.add.rectangle(0, 4, isRook ? 68 : isVolt ? 48 : isMyst ? 46 : 54, 42, fighter.color, 1);
+      const head = this.add.circle(0, isRook ? -37 : -39, isRook ? 25 : isMyst ? 21 : 23, isRook ? 0x374151 : (fighter.skin ?? 0xc98f68));
+      const hair = this.add.ellipse(0, isVolt ? -56 : isMyst ? -48 : -52, isVolt ? 52 : isMyst ? 38 : 48, isVolt ? 26 : isMyst ? 32 : 22, fighter.hair ?? 0x20232c);
       const name = this.add.text(0, 54, fighter.name, { fontSize: '16px', fontStyle: 'bold', color: COLORS.white, letterSpacing: 1 }).setOrigin(0.5);
       const role = this.add.text(0, 74, fighter.title, { fontSize: '8px', color: COLORS.gold, letterSpacing: 0.6 }).setOrigin(0.5);
       const locked = !isFighterUnlocked(fighter.id);

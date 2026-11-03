@@ -2,8 +2,8 @@
 
 **Master Blueprint Reference:** [MASTER_PRODUCTION_BLUEPRINT.md](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/MASTER_PRODUCTION_BLUEPRINT.md)  
 **Active Working Branch:** `v2-reconstruction`  
-**Current Phase:** Phase 5 (Offline Game Modes)  
-**Overall Status:** COMPLETED (Phase 5 Offline Game Modes Verified & Production Ready)
+**Current Phase:** Phase 6 (Initial Four-Fighter Roster: Atlas, Volt, Rook, Myst)  
+**Overall Status:** COMPLETED (Phase 6 Four-Fighter Roster 100% Implemented, Integrated, and Browser-Verified)
 
 ---
 
@@ -128,3 +128,45 @@
   - 15/15 pipeline browser validations passing (`scripts/validate-browser.js`).
 
 *Exit Criteria: COMPLETE. All three offline modes verified end-to-end with zero broken buttons, seamless rematches, and complete input isolation.*
+
+---
+
+### Phase 6: Initial Four-Fighter Roster (Atlas, Volt, Rook, Myst)
+- [x] **Distinct Anime Visual Identities & Purpose-Built Models:**
+  - **Atlas (The Heavyweight):** Balanced archetype, heroic 7.5-head silhouette, high-collar cyber jacket, shoulder pauldrons, spiky navy hair, and signature right-arm Titan Energy Gauntlet with glowing cyan conduits (`#00F0FF`).
+  - **Volt (The Striker):** Speed/rushdown archetype, aerodynamic compression suit, cyber visor goggles with glowing lime HUD slit (`#A6FF00`), swept-back aerodynamic hair spikes, and dual forearm plasma shock blades (`shockBladeL`, `shockBladeR`).
+  - **Rook (The Wall):** Power/tank archetype, towering colossus chassis (1.14x scale, 0.89m chest width), blast helm with horizontal crimson sensor slit (`#FF2040`), tiered fortress pauldrons, hip armor tassets, and dual hydraulic piston fists with steam vents (`pistonPlateL`, `pistonPlateR`, `steamVentL`, `steamVentR`).
+  - **Myst (The Trickster):** Technical/trickster archetype, lithe ethereal trickster silhouette (0.98x scale), porcelain half-mask with glowing magenta eye rune (`#FF00A0`), long asymmetric amethyst bangs, flowing split-tail phantom duster coat (`coatTailL`, `coatTailR`) with mint cyan inner lining (`#42D8C5`), and dual floating holographic glyph rings (`glyphRingL`, `glyphRingR`).
+- [x] **Complete 23-Joint Hierarchies & Fighter Signature Props:**
+  - Every fighter model strictly conforms to the universal articulated joint hierarchy (`root`, `hips`, `torso`, `chest`, `head`, `shoulderL`, `upperArmL`, `elbowL`, `forearmL`, `handL`, `shoulderR`, `upperArmR`, `elbowR`, `forearmR`, `fistR`, `hipJointL`, `thighL`, `kneeL`, `shinL`, `ankleL`, `hipJointR`, `thighR`, `kneeR`, `shinR`, `ankleR`).
+  - Strict preservation of backwards compatibility joint aliases (`armL`, `armR`, `legL`, `legR`) and material slots (`bodyMat`, `accentMat`, `skinMat`, `glowMat`).
+- [x] **Bespoke Procedural Animation Attitudes Across All 17 Combat States:**
+  - Continuous prop animations: Myst's dual holographic glyph rings continuously rotate along their Z-axis during runtime (`±time * 3.5`).
+  - **Idle Guards:** Atlas martial ready guard, Volt low forward predatory blade stance, Rook wide immovable sumo plant, Myst floating open-palm guard with subtle vertical bobbing.
+  - **Locomotion:** Atlas athletic stride, Volt rapid-cadence forward sprint, Rook heavy colossus march with rocking torso sway, Myst smooth ethereal glide stride.
+  - **Dashes:** Atlas athletic burst sprint, Volt swept-wing jet skate sprint, Rook hydraulic bull charge ramming posture, Myst forward ethereal glide teleport.
+  - **Blocks:** Atlas cross-guard, Volt crossed shock-blade X-guard, Rook Twin Buckler Fortress Shield Lock (#IronWall), Myst Astral Barrier Glyph Shield.
+  - **Attacks & Specials:**
+    - Light Punches: Atlas straight jab, Volt lightning thrust with shock blade snap, Rook heavy piston backhand, Myst open-palm astral pulse.
+    - Kicks: Atlas martial roundhouse, Volt lightning high snap kick, Rook knee/shin breaker stomp, Myst spinning crescent sweep kick.
+    - Heavies: Atlas overhead sledgehammer, Volt leaping dual-blade X-slash, Rook two-handed sledgehammer slam, Myst radial vortex release.
+    - Specials: Atlas *Titan Breaker* energy thrust, Volt *Flash Rush* sonic piercer, Rook *Iron Fortress* seismic ground-pound, Myst *Phantom Pulse* spherical vortex burst.
+  - **Reactions & Recoveries:** Full 3D hit reaction, knockdown (floor-flat recovery), get-up (interpolated rising transition), defeat, and unique victory poses (Atlas gauntlet thrust, Volt crossed blade sheath, Rook double chest-pound with hydraulic steam, Myst meditative lotus levitation).
+- [x] **Fighter Selection Previews & 2D Portraits:**
+  - Enhanced `SelectScene.js` with bespoke silhouettes, hairstyles, outfits, accessories, and proportion adjustments for Atlas, Volt, Rook, and Myst.
+  - Interactive 3D preview powered by `CustomizerPreview` with smooth rotation, zooming, and breathing animations.
+- [x] **Full Offline Modes Integration:**
+  - **Arcade Mode:** Full ladder progression supported for all four fighters as player or CPU opponent.
+  - **Training Lab:** Seamless dummy selection and 3D telemetry across all 4 fighters.
+  - **Local Versus Mode:** Independent P1 and P2 selection among all 4 fighters with verified 3D hit exchanges.
+- [x] **Comprehensive Testing & Validation:**
+  - 174/174 unit tests passing (`npm test`).
+  - Dedicated fighter unit test suites: `test/phase6-volt.test.js` (3/3), `test/phase6-rook.test.js` (3/3), `test/phase6-myst.test.js` (3/3), `test/phase6-roster-interop.test.js` (4/4).
+  - Headless Edge CDP browser gameplay validation suites:
+    - Volt In-Browser Verification: 6/6 PASS (`scripts/verify-phase6-volt.js`).
+    - Rook In-Browser Verification: 6/6 PASS (`scripts/verify-phase6-rook.js`).
+    - Myst In-Browser Verification: 6/6 PASS (`scripts/verify-phase6-myst.js`).
+    - Roster & Offline Modes In-Browser Verification: 5/5 PASS (`scripts/verify-phase6-roster-modes.js`).
+  - Production build succeeds without errors (`npm run build`).
+
+*Exit Criteria: COMPLETE. Initial four-fighter anime roster (Atlas, Volt, Rook, Myst) fully built with bespoke visual identities, complete joint hierarchies, tailored procedural animations, archetype combat tuning, and seamless offline modes integration.*

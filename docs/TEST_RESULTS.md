@@ -1,7 +1,7 @@
 # Brawl Wars - Test & Browser Validation Results Register
 
-**Document Version:** 1.5.0  
-**Phase Milestone:** Phase 5: Offline Game Modes (Arcade, Training, Local Versus)  
+**Document Version:** 1.6.0  
+**Phase Milestone:** Phase 6: Initial Four-Fighter Roster (Atlas, Volt, Rook, Myst)  
 **Date of Run:** 2026-11-03  
 **Platform / OS:** Windows 11  
 **Browser Engine:** Microsoft Edge 156.0.4314.58 (Headless Chromium via CDP)  
@@ -11,16 +11,20 @@
 
 ## 1. Automated Test Suite Summary (`npm test`)
 
-- **Total Test Suites Executed:** 29
-- **Total Test Cases:** 161
-- **Passed:** 161 (100%)
+- **Total Test Suites Executed:** 33
+- **Total Test Cases:** 174
+- **Passed:** 174 (100%)
 - **Failed:** 0
-- **Duration:** ~700ms
+- **Duration:** ~665ms
 
 ### Suite Breakdown
 
 | Test Suite | Tests Passed | Key Capabilities Verified |
 | :--- | :--- | :--- |
+| `test/phase6-roster-interop.test.js` | 4/4 | Initial four-fighter roster integrity (Atlas, Volt, Rook, Myst), 17-state animation verification across all 4 fighters, Arcade/Training/Local Versus mode interoperability, 3D combat hit & special attack registration across all matchup pairs |
+| `test/phase6-myst.test.js` | 3/3 | Myst lithe ethereal model construction, porcelain half-mask, split-tail phantom duster coat, rotating holographic glyph rings, 17-state animation evaluation (floating idle, teleport glide dash, astral glyph shield block, crescent sweep kick, phantom pulse special, levitation victory), technical archetype stats |
+| `test/phase6-rook.test.js` | 3/3 | Rook colossus model construction (1.14x scale), blast helm with crimson slit, hydraulic piston gauntlets and steam vents, 17-state animation evaluation (sumo idle guard, bull charge dash, twin buckler fortress shield lock, sledgehammer heavy, iron fortress special), tank archetype stats |
+| `test/phase6-volt.test.js` | 3/3 | Volt aerodynamic model construction, cyber visor goggles with glowing HUD slit, dual plasma shock blades, 17-state animation evaluation (predatory idle guard, jet skate sprint dash, crossed shock-blade X-guard block, leaping X-slash heavy, flash rush special), speed archetype stats |
 | `test/phase5-offline-modes.test.js` | 4/4 | Arcade ladder progression & retry mechanics, Training 3D position/depth/velocity/cooldown reset, Local Versus independent fighter selection & victor reporting, Pause/Restart hotkey registrations |
 | `test/phase4-combat-balance.test.js` | 6/6 | Air-hit landing knockdown, get-up recovery transition, action locking during recovery, CPU 3D depth approach, CPU heavy attack threat blocking, punch->kick->heavy cancel chain |
 | `test/phase2-3-vertical-slice.test.js` | 4/4 | Neon District geometry/skyline/hovercars/fans/lasers, Atlas 16-joint articulated anime model & Titan Gauntlet, procedural animation across 23 combat states, synthesized heavy/dash audio |
@@ -47,7 +51,62 @@
 
 ## 2. In-Browser Headless CDP Gameplay Verifications
 
-### 2.1 Phase 5 Offline Game Modes Verification (`scripts/verify-phase5-offline-modes.js`)
+### 2.1 Phase 6.4 Roster Previews & Offline Modes Interoperability (`scripts/verify-phase6-roster-modes.js`)
+- **Host / Browser:** Microsoft Edge Headless via Chrome DevTools Protocol
+- **Port:** HTTP 5185 (serving production `dist/`)
+- **Status:** 5/5 Passed (100%)
+
+| Step | Validation Test | Result | Measured Details |
+| :--- | :--- | :--- | :--- |
+| 1 | SelectScene Fighter Selection & Previews | ✔ PASS | Live previews render distinct models for Atlas (idx=0), Volt (idx=1), Rook (idx=2) |
+| 2 | Arcade Mode Match (Volt vs Rook) | ✔ PASS | Arcade mode=true, player=volt (dual shock blades=true) vs cpu=rook (piston plates=true) |
+| 3 | Training Lab (Rook vs Atlas Dummy) | ✔ PASS | Training mode=true, player=rook (steam vents=true), dummy=atlas (titan fist=true) |
+| 4 | Local Versus Mode (Myst P1 vs Volt P2) | ✔ PASS | Local mode=true, P1=myst (split duster coat & rotating glyphs=true) vs P2=volt (shock blades=true) |
+| 5 | In-Arena 3D Combat Hit & State Transition | ✔ PASS | P1 Myst punch connects with P2 Volt; P2 health reduced from 100 to 93.7; state transitions to `hit` |
+
+### 2.2 Phase 6.3 Myst In-Browser Verification (`scripts/verify-phase6-myst.js`)
+- **Host / Browser:** Microsoft Edge Headless via Chrome DevTools Protocol
+- **Port:** HTTP 5184 (serving production `dist/`)
+- **Status:** 6/6 Passed (100%)
+
+| Step | Validation Test | Result | Measured Details |
+| :--- | :--- | :--- | :--- |
+| 1 | Myst Model Construction & Signature Props | ✔ PASS | Lithe 0.98x chassis, porcelain half-mask, split-tail phantom duster coat, rotating glyph rings, astral pink glow (`#FF00A0`) |
+| 2 | Myst Floating Open-Palm Guard & Technical Stats | ✔ PASS | Floating pelvis bob (y=0.98), open-palm elbows (L=1.25, R=1.35), technical speedMultiplier=1.045 |
+| 3 | Myst Ethereal Teleport Glide Dash | ✔ PASS | Forward ethereal lean (torsoX=-0.32), swept glide arms (shoulderLX=0.34, shoulderRX=0.76) |
+| 4 | Myst Spinning Crescent Sweep Kick | ✔ PASS | High torque rotation (torsoY=0.50), high crescent leg arc (thighRZ=-1.35) |
+| 5 | Myst Phantom Pulse Vortex Burst Special | ✔ PASS | Energy consumed (50 -> 5), spherical pulse thrust (torsoX=-0.40, shoulderLX=-1.85, shoulderRX=-1.85) |
+| 6 | Myst Astral Barrier Glyph Shield Block | ✔ PASS | Blocking=true, parallel shield alignment (shoulderLX=-1.30, shoulderRX=-1.30, elbowLX=1.70, elbowRX=1.70) |
+
+### 2.3 Phase 6.2 Rook In-Browser Verification (`scripts/verify-phase6-rook.js`)
+- **Host / Browser:** Microsoft Edge Headless via Chrome DevTools Protocol
+- **Port:** HTTP 5183 (serving production `dist/`)
+- **Status:** 6/6 Passed (100%)
+
+| Step | Validation Test | Result | Measured Details |
+| :--- | :--- | :--- | :--- |
+| 1 | Rook Model Construction & Hydraulic Gauntlets | ✔ PASS | Colossus 1.14x chassis, blast helm, dual hydraulic piston plates & steam vents, crimson reactor glow (`#FF2040`) |
+| 2 | Rook Sumo Idle Guard & Armor Stats | ✔ PASS | Immovable wide legs (thighLZ=-0.22, thighRZ=0.22), wide piston arms (shoulderLY=0.35, shoulderRY=-0.35), damageMultiplier=1.04, guardMultiplier=0.93 |
+| 3 | Rook Hydraulic Bull Charge Dash | ✔ PASS | Ramming posture (torsoX=-0.32), locked forearms (elbowLX=1.45, elbowRX=1.45) |
+| 4 | Rook Two-Handed Sledgehammer Heavy Strike | ✔ PASS | Overhead sledgehammer raise (shoulderLX=-2.25, shoulderRX=-2.25) |
+| 5 | Rook Iron Fortress Seismic Ground-Pound Special | ✔ PASS | Ground slam (torsoX=-0.55), fists grounded (shoulderLX=-1.35, shoulderRX=-1.35) |
+| 6 | Rook Twin Buckler Fortress Shield Lock (#IronWall) | ✔ PASS | Shield lock (shoulderLX=-1.20, shoulderRX=-1.20, elbowLX=1.55, elbowRX=1.55) |
+
+### 2.4 Phase 6.1 Volt In-Browser Verification (`scripts/verify-phase6-volt.js`)
+- **Host / Browser:** Microsoft Edge Headless via Chrome DevTools Protocol
+- **Port:** HTTP 5182 (serving production `dist/`)
+- **Status:** 6/6 Passed (100%)
+
+| Step | Validation Test | Result | Measured Details |
+| :--- | :--- | :--- | :--- |
+| 1 | Volt Model Construction & Shock Blades | ✔ PASS | Aerodynamic suit, cyber visor goggles, swept hair spikes, dual shock blades, neon lime plasma glow (`#A6FF00`) |
+| 2 | Volt Predatory Idle Guard & Speed Stats | ✔ PASS | Forward predatory lean (torsoX=-0.12), blade guard ready (elbowLX=1.35, elbowRX=1.45), speedMultiplier=1.09 |
+| 3 | Volt Swept-Wing Jet Skate Sprint Dash | ✔ PASS | High forward lean (torsoX=-0.38), swept jet-wing arms (shoulderLX=0.65, shoulderRX=0.65) |
+| 4 | Volt Leaping Dual-Blade X-Slash Heavy | ✔ PASS | Crossed downward slash (shoulderLX=-1.95, shoulderRX=-1.95) |
+| 5 | Volt Flash Rush Sonic Piercer Special | ✔ PASS | Low thrust drive (torsoX=-0.45), rigid forward dual blade spear (elbowLX=0.04, elbowRX=0.04) |
+| 6 | Volt Crossed Shock-Blade X-Guard Block | ✔ PASS | Parrying X-cross blades (shoulderLX=-1.35, shoulderRX=-1.35, elbowLX=1.75, elbowRX=1.75) |
+
+### 2.5 Phase 5 Offline Game Modes Verification (`scripts/verify-phase5-offline-modes.js`)
 - **Host / Browser:** Microsoft Edge Headless via Chrome DevTools Protocol
 - **Port:** HTTP 5179 (serving production `dist/`)
 - **Status:** 4/4 Passed (100%)

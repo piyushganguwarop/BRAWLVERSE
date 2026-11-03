@@ -139,7 +139,7 @@ async function runVerification() {
         versionData = await res.json();
         break;
       }
-    } catch {}
+    } catch { }
     await new Promise(r => setTimeout(r, 200));
   }
 
@@ -455,7 +455,7 @@ async function runVerification() {
     server.close();
     try {
       fs.rmSync(tempProfileDir, { recursive: true, force: true });
-    } catch {}
+    } catch { }
   }
 
   const allPassed = results.every(r => r.pass);
