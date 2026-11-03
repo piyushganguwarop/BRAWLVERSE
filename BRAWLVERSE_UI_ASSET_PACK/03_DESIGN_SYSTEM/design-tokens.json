@@ -1,0 +1,28 @@
+{
+  "brand": "BRAWLVERSE",
+  "colors": {
+    "background": "#070D17",
+    "surface": "#101B2C",
+    "surfaceRaised": "#17263B",
+    "cyan": "#12DDEB",
+    "cyanSoft": "#75F4FA",
+    "magenta": "#FF3D91",
+    "violet": "#9B67FF",
+    "gold": "#F4C65E",
+    "success": "#1FE0A1",
+    "danger": "#FF4778",
+    "text": "#F4F7FC",
+    "muted": "#91A2B9",
+    "border": "#344A66"
+  },
+  "fonts": {
+    "display": "Orbitron",
+    "heading": "Rajdhani",
+    "body": "Inter"
+  },
+  "layouts": {
+    "desktop": "1920x1080",
+    "compact": "1366x768",
+    "mobileLandscape": "844x390"
+  }
+}

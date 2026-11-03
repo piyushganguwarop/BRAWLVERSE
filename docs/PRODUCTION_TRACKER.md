@@ -225,4 +225,39 @@
   - Resolved all unnecessary scrollbars and verified desktop (1920x1080), compact (1366x768), and mobile landscape (844x390).
   - Captured verified browser screenshots: `m1_01_main_menu_1920x1080.png`, `m1_02_main_menu_1366x768.png`, `m1_03_main_menu_844x390.png`, `m1_04_mode_select_1920x1080.png`.
 
-*Exit Criteria: Milestone 1 COMPLETE. Verified across 177/177 automated tests, production build, and CDP in-browser screenshots.*
+- [x] **Milestone 2: Mode Select Polish, Fighter Select (Screen 03) & Arena Select (Screen 04):**
+  - Integrated quick dossier strip (`LVL 1`, `COINS`) into Screen 02 Mode Select topbar for 100% navigation visual consistency.
+  - Redesigned Screen 03 Fighter Select with commercial anime fighting game aesthetics:
+    - Dedicated Live 3D Fighter Showcase terminal (`#selection-preview`) with `.bv-panel` geometry, Electric Cyan glowing border, and beveled clip-path.
+    - Real-time 3D Three.js interactive viewport running `CustomizerPreview` for Atlas, Volt, Rook, and Myst with custom anime lighting and pedestal ring.
+    - 4 Segmented Cyber Stat Bars (Power, Speed, Range, Defense) displaying discrete glowing blocks (5-tier resolution).
+    - Dynamic archetype badge (`BALANCED`, `RUSHDOWN`, `TANK`, `TRICKSTER`) and glowing Special Attack banner (`★ SPECIAL: TITAN BREAKER`, `FLASH RUSH`, `IRON FORTRESS`, `PHANTOM PULSE`).
+    - Center 8-fighter roster grid with high-contrast portrait silhouettes, archetype tags, sharp cyber borders, and active Electric Cyan highlight.
+    - CPU Difficulty selector (`EASY`, `NORMAL`, `HARD`) with Electric Cyan active pill.
+    - Local Versus Player 2 Rival selector with Hot Magenta (`#FF3D91`) designation.
+  - Redesigned Screen 04 Arena Select with command deck architecture:
+    - Dedicated Live Arena Showcase terminal (`#stage-preview`) with `.bv-panel` geometry and Electric Sky Blue borders.
+    - Dynamic multi-layered arena art viewport with glowing spotlights, animated neon bill-board scanlines, and reflective floor grid.
+    - Environment metadata subtitles (`NEO-TOKYO UNDERGROUND`, `SACRED LANTERN SANCTUARY`, `MIDNIGHT SKYLINE HELIPAD`).
+    - Arena Carousel with interactive thumbnail buttons (`NEON`, `TEMPLE`, `ROOFTOP`) and carousel navigation arrows (`‹ PREV`, `NEXT ›`).
+    - Accurate lock/unlock thresholds synced with `Progression.js`.
+  - Re-engineered layout for responsive scaling:
+    - Desktop 1920x1080: Balanced cockpit layout framing Arena Deck on the left, Roster in center, and 3D Showcase on the right.
+    - Compact 1366x768: Proportional panel scaling without clipping or overlap.
+    - Mobile Landscape 844x390: Compact vertically balanced touch-friendly layout with zero overlap.
+  - Automated tests & build:
+    - 177/177 unit tests pass (`npm test`).
+    - Production build compiles cleanly with zero errors (`npm run build`).
+  - Captured 10 in-browser screenshots in [`docs/audit_screenshots/`](file:///c:/Users/piyush/Downloads/PiyuProjects\BRAWLVERSE\docs\audit_screenshots\):
+    - `m2_01_mode_select_1920x1080.png`
+    - `m2_02_fighter_select_atlas_1920x1080.png`
+    - `m2_03_fighter_select_volt_1920x1080.png`
+    - `m2_04_fighter_select_rook_1920x1080.png`
+    - `m2_05_fighter_select_myst_1920x1080.png`
+    - `m2_06_arena_select_neon_1920x1080.png`
+    - `m2_07_arena_select_temple_1920x1080.png`
+    - `m2_08_arena_select_rooftop_1920x1080.png`
+    - `m2_09_fighter_select_1366x768.png`
+    - `m2_10_fighter_select_mobile_844x390.png`
+
+*Exit Criteria: Milestones 1 and 2 COMPLETE. Verified across 177/177 automated tests, production build, and CDP in-browser screenshots.*

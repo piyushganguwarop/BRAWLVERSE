@@ -1,0 +1,9 @@
+{
+  "project": "BRAWLVERSE",
+  "version": "1.0",
+  "purpose": "Phase 7 UI redesign handoff",
+  "brand": "BRAWLVERSE",
+  "branch": "v2-reconstruction",
+  "screens": 12,
+  "note": "Phase 8 is performance optimization."
+}

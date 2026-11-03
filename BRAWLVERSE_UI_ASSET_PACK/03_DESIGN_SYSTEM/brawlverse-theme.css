@@ -1,0 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+:root{--bv-bg:#070D17;--bv-surface:#101B2C;--bv-raised:#17263B;--bv-cyan:#12DDEB;--bv-magenta:#FF3D91;--bv-violet:#9B67FF;--bv-gold:#F4C65E;--bv-success:#1FE0A1;--bv-danger:#FF4778;--bv-text:#F4F7FC;--bv-muted:#91A2B9;--bv-border:#344A66;--bv-display:'Orbitron','Rajdhani',sans-serif;--bv-heading:'Rajdhani',sans-serif;--bv-body:'Inter',Arial,sans-serif}
+.bv-panel{background:linear-gradient(145deg,#17263b,#0a1220);border:1px solid var(--bv-border);clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+.bv-button{font:700 1rem var(--bv-heading);letter-spacing:.06em;text-transform:uppercase;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:transform 140ms ease,filter 140ms ease}
+.bv-button:hover{transform:translateY(-1px);filter:brightness(1.12)}.bv-button-primary{background:var(--bv-cyan);color:#06121c}.bv-button-secondary{background:#101d30;color:var(--bv-text);border:1px solid #435a78}
+@media(prefers-reduced-motion:reduce){.bv-button{transition:none}}

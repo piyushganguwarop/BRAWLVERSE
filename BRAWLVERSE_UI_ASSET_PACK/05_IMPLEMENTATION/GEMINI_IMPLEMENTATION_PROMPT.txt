@@ -1,0 +1,58 @@
+BRAWLVERSE UI REDESIGN - IMPLEMENTATION HANDOFF
+
+Use this ZIP as the approved visual specification and asset source.
+
+PROJECT
+Repository: https://github.com/piyushganguwarop/BRAWLVERSE
+Branch: v2-reconstruction
+Brand name: BRAWLVERSE. Do not show Brawl Wars in visible UI.
+This is Phase 7: UI, progression, audio and polish. Phase 8 is performance optimization and is separate.
+
+BEFORE EDITING
+1. Check git status, branch and latest commit. Preserve uncommitted work.
+2. Inspect the current UI architecture, screens, CSS, assets and rendering layers.
+3. Read this ZIP's README, screen specifications, design tokens and concept board.
+4. Inventory existing PNG/JPG/WebP/SVG/font assets and create a contact sheet.
+5. Inspect the real app in a browser and capture current screenshots.
+6. Identify HTML/CSS, Phaser and Three.js ownership. Avoid duplicate layers and competing input handlers.
+7. Report the files you intend to change before coding.
+
+IMPLEMENTATION RULES
+- The concept board defines visual direction, not a pixel-perfect screenshot to blindly copy.
+- Reuse supplied SVG logo, icons, panel/button vectors and CSS tokens where appropriate.
+- Use existing Three.js fighter models for live previews.
+- Do not replace playable 3D fighters with static art.
+- Do not invent modes, features, unlocks, rewards, settings or online functionality.
+- Preserve combat, movement, CPU AI, Arcade, Training, Local Versus, saves and progression.
+- Keep every UI control connected to real game actions.
+- Preserve keyboard, mouse, touch, focus handling and responsive behavior.
+- Use original or properly licensed art only.
+- Avoid generic dashboard cards, excessive round corners, random gradients, default Arial styling, giant whitespace and unnecessary scrollbars.
+- Do not redesign all screens in one pass.
+
+MILESTONES
+1. Main Menu.
+2. Mode Select and Fighter Select.
+3. Arena Select.
+4. Fight HUD and Pause Menu.
+5. Victory and Defeat.
+6. Fighter Workshop / Creator.
+7. Profile and Collection.
+8. Settings and responsive/accessibility polish.
+
+For each milestone:
+- State the plan.
+- Implement one coherent milestone.
+- Run targeted tests, full npm test and npm run build.
+- Run browser validation.
+- Capture actual browser screenshots at 1920x1080, 1366x768 and 844x390 landscape where possible.
+- Verify every button, interaction, overflow and browser console.
+- Update production tracker and test results only with verified facts.
+- Review git diff and commit on v2-reconstruction.
+
+Do not claim tests, screenshots, mobile checks or manual verification unless actually performed. Do not weaken tests. Do not overwrite user changes. Do not modify or merge into main. Do not begin Phase 8 until Phase 7 acceptance criteria pass.
+
+FIRST DELIVERABLE
+Audit the current UI and list the files/assets to change. Then implement only the Main Menu. Show a real browser screenshot and wait for visual feedback before continuing to the next screen.
+
+Goal: a clean, readable, premium BRAWLVERSE fighting-game interface, not a generic dashboard.

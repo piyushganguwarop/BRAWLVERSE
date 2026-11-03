@@ -92,9 +92,13 @@ export class MainMenuScene extends Phaser.Scene {
     const p = progressionSnapshot();
     const lvlEl = $('menu-dossier-level');
     const coinsEl = $('menu-dossier-coins');
+    const modesLvlEl = $('modes-dossier-level');
+    const modesCoinsEl = $('modes-dossier-coins');
     const fighterEl = $('menu-dossier-fighter');
     if (lvlEl) lvlEl.textContent = `LVL ${p.level}`;
     if (coinsEl) coinsEl.textContent = Number(p.coins || 0).toLocaleString();
+    if (modesLvlEl) modesLvlEl.textContent = `LVL ${p.level}`;
+    if (modesCoinsEl) modesCoinsEl.textContent = Number(p.coins || 0).toLocaleString();
     if (fighterEl) {
       const useCustom = localStorage.getItem('fighter.custom.use.v1') === '1';
       const slot = getActiveCustomSlot();
