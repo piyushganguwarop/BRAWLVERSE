@@ -100,7 +100,7 @@ export class InputManager {
       dashBack: ['KeyQ'],
       punch: ['KeyJ'],
       kick: ['KeyK'],
-      heavy: ['KeyL'],
+      heavy: ['KeyL', 'KeyI'],
       grab: ['KeyU', 'KeyG'],
       special: ['KeyO', 'Semicolon'],
       block: ['ShiftLeft']

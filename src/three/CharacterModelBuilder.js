@@ -650,13 +650,27 @@ export class CharacterModelBuilder {
     // -------------------------------------------------------------
     // STATE: KO / KNOCKDOWN / DEFEAT
     // -------------------------------------------------------------
-    else if (state === 'ko' || state === 'defeat') {
+    else if (state === 'ko' || state === 'defeat' || state === 'knockdown') {
       m.root.rotation.z = -1.45; // Flat on floor
       m.root.position.y = 0.16;
       m.shoulderL.rotation.set(0.65, 0.2, 0);
       m.shoulderR.rotation.set(0.65, -0.2, 0);
       m.thighL.rotation.x = 0.25;
       m.thighR.rotation.x = -0.15;
+    }
+
+    // -------------------------------------------------------------
+    // STATE: GET_UP (Rising transition from floor to grounded stance)
+    // -------------------------------------------------------------
+    else if (state === 'get_up') {
+      const getUpProgress = Math.min(1, Math.max(0, 1 - (fighter.actionTime || 0) / 0.28));
+      m.root.rotation.z = -1.45 * (1 - getUpProgress);
+      m.root.position.y = 0.16 * (1 - getUpProgress);
+      m.torso.rotation.x = -0.22 * (1 - getUpProgress);
+      m.kneeL.rotation.x = -0.55 * (1 - getUpProgress);
+      m.kneeR.rotation.x = -0.55 * (1 - getUpProgress);
+      m.shoulderL.rotation.set(-0.35 * (1 - getUpProgress), 0.2, 0);
+      m.shoulderR.rotation.set(-0.35 * (1 - getUpProgress), -0.2, 0);
     }
 
     // -------------------------------------------------------------

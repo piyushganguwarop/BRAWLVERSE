@@ -1,8 +1,8 @@
 # Brawl Wars - Test & Browser Validation Results Register
 
-**Document Version:** 1.3.0  
-**Phase Milestone:** Phase 2 (Neon District) & Phase 3 (First Fighter: Atlas) — Vertical Slice  
-**Date of Run:** 2026-11-02  
+**Document Version:** 1.4.0  
+**Phase Milestone:** Phase 4: Combat Completion & Balance  
+**Date of Run:** 2026-11-03  
 **Platform / OS:** Windows 11  
 **Browser Engine:** Microsoft Edge 156.0.4314.58 (Headless Chromium via CDP)  
 **Status:** ALL TESTS PASSING (100% Green)  
@@ -11,16 +11,17 @@
 
 ## 1. Automated Test Suite Summary (`npm test`)
 
-- **Total Test Suites Executed:** 27
-- **Total Test Cases:** 151
-- **Passed:** 151 (100%)
+- **Total Test Suites Executed:** 28
+- **Total Test Cases:** 157
+- **Passed:** 157 (100%)
 - **Failed:** 0
-- **Duration:** ~580ms
+- **Duration:** ~600ms
 
 ### Suite Breakdown
 
 | Test Suite | Tests Passed | Key Capabilities Verified |
 | :--- | :--- | :--- |
+| `test/phase4-combat-balance.test.js` | 6/6 | Air-hit landing knockdown, get-up recovery transition, action locking during recovery, CPU 3D depth approach, CPU heavy attack threat blocking, punch->kick->heavy cancel chain |
 | `test/phase2-3-vertical-slice.test.js` | 4/4 | Neon District geometry/skyline/hovercars/fans/lasers, Atlas 16-joint articulated anime model & Titan Gauntlet, procedural animation across 23 combat states, synthesized heavy/dash audio |
 | `test/phase1-2-regressions.test.js` | 10/10 | No legacy Phaser key reads, P1/P2 dash isolation, kick/heavy separation, heavy attack execution, active model + clear(), release after clear, repeated release safety, texture ownership, 3D XZ knockback, diagonal grab displacement |
 | `test/phase1-2-input.test.js` | 7/7 | Disambiguated P1 & P2 bindings, W/S depth motion vs jump/crouch, keydown/keyup state toggling, double-tap dash buffer, gamepad deadzone & stick mapping, all actions via InputManager, scene clear & reset |

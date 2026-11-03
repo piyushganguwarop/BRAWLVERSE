@@ -2,8 +2,8 @@
 
 **Master Blueprint Reference:** [MASTER_PRODUCTION_BLUEPRINT.md](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/MASTER_PRODUCTION_BLUEPRINT.md)  
 **Active Working Branch:** `v2-reconstruction`  
-**Current Phase:** Phase 2 (Neon District Arena) & Phase 3 (First Fighter: Atlas) — Vertical Slice  
-**Overall Status:** COMPLETED (Vertical Slice Playable & Validated)
+**Current Phase:** Phase 4 (Combat Completion & Balance)  
+**Overall Status:** COMPLETED (Phase 4 Combat Polish & Balance Locked)
 
 ---
 
@@ -82,3 +82,16 @@
   - Production build succeeds without errors (`npm run build`).
 
 *Exit Criteria: COMPLETE. Full vertical slice with Neon District arena and Atlas fighter verified in automated test suite and live Chromium browser runtime.*
+
+---
+
+### Phase 4: Combat Completion and Balance
+- [x] **Complete Moveset Validation:** Punch, Kick, Heavy, Grab (guard break), Special (*Titan Breaker*), Block, Perfect Block, Directional Dash/Dodge, Jump attacks, Crouch attacks.
+- [x] **Knockdown and Get-Up State Machine:** Landing from air hits, air juggles, and launchers transitions fighters into `knockdown` (0.40s floor recovery with invulnerability), followed by `get_up` (0.28s rising transition) back to `idle`. Actions and movement are locked during recovery, preventing OTG infinites.
+- [x] **Procedural Animation Poses:** `CharacterModelBuilder` evaluates explicit `knockdown` (ground flat pose) and `get_up` (interpolated rising crouch transition).
+- [x] **CPU 3D Depth Awareness & Threat Recognition:** `CPUController` recognizes `heavy` attack in incoming `THREATS` for guard reaction, and navigates $Z$ depth (`depthUp` / `depthDown`) to approach opponents in 3D.
+- [x] **Cancels & Combo Bounding:** Validated three-hit chain (`punch -> kick -> heavy`) within configured cancel windows, with air juggle scaling down to `minimumComboDamage` (0.42).
+- [x] **Directional Defense & Guard Bypass:** Directional frontal guard mitigation, rear attack bypass, perfect block window (0.12s) bonus energy, and unmitigated guard break on grab.
+- [x] **Test & Build Verification:** 157/157 unit tests passing (`test/phase4-combat-balance.test.js`), 15/15 browser CDP tests passing, and clean Vite production build.
+
+*Exit Criteria: COMPLETE. Robust 3D combat loop, knockdowns, get-up recovery, CPU 3D positioning, and move tuning verified.*

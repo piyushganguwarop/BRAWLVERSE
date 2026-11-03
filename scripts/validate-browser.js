@@ -529,6 +529,7 @@ async function runValidation() {
         const scene = window.__brawlGame.scene.getScene('FightScene');
         scene.player.x = 0; scene.player.z = 0;
         scene.cpu.x = 0.8; scene.cpu.z = 0.8; scene.cpu.health = 100;
+        scene.cpu.invulnerable = 0; scene.cpu.state = 'idle';
         scene.player.facingAngle = Math.PI / 4;
         scene.player.facingVector = { x: Math.SQRT1_2, z: Math.SQRT1_2 };
 

@@ -25,6 +25,7 @@ export class Fighter {
     this.invulnerable = 0;
     this.knockbackVelocity = 0;
     this.knockbackVelocityZ = 0;
+    this.knockdownOnLanding = false;
     this.perfectBlock = false;
     this.blockAge = 999;
   }
@@ -52,8 +53,22 @@ export class Fighter {
     }
     if (this.state === 'hit' && this.actionTime > 0) this.actionTime = Math.max(0, this.actionTime - dt);
     if (this.state === 'hit' && this.actionTime <= 0 && this.stun <= 0) this.state = 'idle';
+    if (this.state === 'knockdown') {
+      this.actionTime = Math.max(0, this.actionTime - dt);
+      if (this.actionTime <= 0) {
+        this.state = 'get_up';
+        this.actionTime = 0.28;
+        this.invulnerable = 0.30;
+      }
+    } else if (this.state === 'get_up') {
+      this.actionTime = Math.max(0, this.actionTime - dt);
+      if (this.actionTime <= 0) {
+        this.state = 'idle';
+        this.invulnerable = 0;
+      }
+    }
 
-    const locked = this.activeAction || this.state === 'hit' || this.stun > 0;
+    const locked = this.activeAction || this.state === 'hit' || this.state === 'knockdown' || this.state === 'get_up' || this.stun > 0;
     if (!locked && !this.blocking && this.dashCooldown <= 0 && this.dashTime <= 0) {
       const requested = input.dashForward ? 1 : input.dashBack ? -1 : 0;
       if (requested || input.dash) {
@@ -116,7 +131,18 @@ export class Fighter {
 
     this.vy -= gameConfig.world.gravity * dt;
     this.y = Math.max(0, this.y + this.vy * dt);
-    if (this.y === 0 && this.vy < 0) { this.vy = 0; this.juggleHits = 0; }
+    if (this.y === 0 && this.vy < 0) {
+      this.vy = 0;
+      this.juggleHits = 0;
+      if (this.knockdownOnLanding || this.state === 'hit') {
+        this.knockdownOnLanding = false;
+        this.state = 'knockdown';
+        this.actionTime = 0.40;
+        this.invulnerable = 0.50;
+        this.stun = 0;
+        this.activeAction = null;
+      }
+    }
     this.x += this.knockbackVelocity * dt;
     this.z += this.knockbackVelocityZ * dt;
     this.knockbackVelocity *= Math.max(0, 1 - 8 * dt);
@@ -175,7 +201,7 @@ export class Fighter {
   }
 
   takeHit(damage, attackerFacing, spec = {}, attacker = null) {
-    if (this.invulnerable > 0 || this.health <= 0) return { damage: 0, blocked: false, perfect: false };
+    if (this.invulnerable > 0 || this.health <= 0 || this.state === 'knockdown' || this.state === 'get_up') return { damage: 0, blocked: false, perfect: false };
     let facingAttacker = false;
     let dirX = 0;
     let dirZ = 0;
@@ -224,6 +250,7 @@ export class Fighter {
       this.state = 'hit'; this.activeAction = null; this.actionTime = spec.hitstun ?? 0.25;
       this.stun = spec.hitstun ?? 0.25; this.actionElapsed = 0;
       this.comboWindow = 0; this.comboCount = 0;
+      if (this.y > 0.08 || spec.launcher) this.knockdownOnLanding = true;
       const kb = (spec.knockback ?? 0.35) * 5;
       this.knockbackVelocity = (dirX * kb) || 0;
       this.knockbackVelocityZ = (dirZ * kb) || 0;
