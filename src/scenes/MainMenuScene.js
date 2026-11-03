@@ -36,7 +36,7 @@ export class MainMenuScene extends Phaser.Scene {
     if (canvasContainer && !this.showcase) {
       try {
         this.showcase = new MenuShowcase(canvasContainer);
-      } catch {}
+      } catch { }
     }
     this.updateQuickDossier();
     const show = (screen) => { shell.querySelectorAll('[data-menu-screen]').forEach(el => el.hidden = el.dataset.menuScreen !== screen); };
@@ -70,7 +70,7 @@ export class MainMenuScene extends Phaser.Scene {
       btn.onmouseenter = () => audioManager.playHover();
       btn.onclick = () => { audioManager.playCancel(); show(btn.dataset.back || 'home'); };
     });
-    for (const [id, key] of [['setting-master','fighter.settings.master'],['setting-music','fighter.settings.music'],['setting-effects','fighter.settings.effects']]) {
+    for (const [id, key] of [['setting-master', 'fighter.settings.master'], ['setting-music', 'fighter.settings.music'], ['setting-effects', 'fighter.settings.effects']]) {
       const el = $(id);
       if (el) el.oninput = e => {
         localStorage.setItem(key, e.target.value);
@@ -83,8 +83,8 @@ export class MainMenuScene extends Phaser.Scene {
     const shake = $('setting-shake'); if (shake) shake.onchange = e => localStorage.setItem('fighter.settings.shake', e.target.checked ? '1' : '0');
     const quality = $('setting-quality'); if (quality) quality.onchange = e => localStorage.setItem('fighter.settings.quality', e.target.value);
     const fullscreen = $('setting-fullscreen'); if (fullscreen) fullscreen.onchange = () => this.toggleFullscreen(fullscreen.checked);
-    $('profile-name') && ($('profile-name').onchange = e => localStorage.setItem('fighter.profile.name', e.target.value.trim().slice(0,18) || 'Player'));
-    $('profile-save') && ($('profile-save').onclick = () => { audioManager.playClick(); localStorage.setItem('fighter.profile.name', $('profile-name').value.trim().slice(0,18) || 'Player'); setStatus('Profile saved on this device.'); this.updateQuickDossier(); });
+    $('profile-name') && ($('profile-name').onchange = e => localStorage.setItem('fighter.profile.name', e.target.value.trim().slice(0, 18) || 'Player'));
+    $('profile-save') && ($('profile-save').onclick = () => { audioManager.playClick(); localStorage.setItem('fighter.profile.name', $('profile-name').value.trim().slice(0, 18) || 'Player'); setStatus('Profile saved on this device.'); this.updateQuickDossier(); });
     this.loadSettings(); this.loadProfile(); show('home');
   }
   updateQuickDossier() {
@@ -102,11 +102,11 @@ export class MainMenuScene extends Phaser.Scene {
     }
   }
   loadSettings() {
-    for (const [id, key, fallback] of [['setting-master','fighter.settings.master','80'],['setting-music','fighter.settings.music','65'],['setting-effects','fighter.settings.effects','85']]) { const el = $(id); if (el) el.value = localStorage.getItem(key) ?? fallback; }
+    for (const [id, key, fallback] of [['setting-master', 'fighter.settings.master', '80'], ['setting-music', 'fighter.settings.music', '65'], ['setting-effects', 'fighter.settings.effects', '85']]) { const el = $(id); if (el) el.value = localStorage.getItem(key) ?? fallback; }
     const shake = $('setting-shake'); if (shake) shake.checked = localStorage.getItem('fighter.settings.shake') === '1';
     const quality = $('setting-quality'); if (quality) quality.value = localStorage.getItem('fighter.settings.quality') || 'high';
     const fullscreen = $('setting-fullscreen'); if (fullscreen) fullscreen.checked = !!document.fullscreenElement;
-    for (const id of ['setting-master','setting-music','setting-effects']) { const el = $(id); const out = el?.parentElement.querySelector('output'); if (el && out) out.textContent = `${el.value}%`; }
+    for (const id of ['setting-master', 'setting-music', 'setting-effects']) { const el = $(id); const out = el?.parentElement.querySelector('output'); if (el && out) out.textContent = `${el.value}%`; }
     audioManager.syncVolumes();
   }
   async toggleFullscreen(enabled) {

@@ -46,3 +46,4 @@ test('Phase 7 - AudioManager: volume bus mixing and clamping integrity', () => {
   assert.doesNotThrow(() => audioManager.setMusicVolume(1.5));
   assert.doesNotThrow(() => audioManager.syncVolumes());
 });
+
