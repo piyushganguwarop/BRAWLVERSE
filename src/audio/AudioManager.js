@@ -324,6 +324,295 @@ class AudioManager {
       osc.stop(now + 0.05);
     } catch {}
   }
+
+  // --- UI Sound Effects ---
+
+  playHover() {
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.sfxGain) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(740, now);
+      osc.frequency.exponentialRampToValueAtTime(1180, now + 0.035);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    } catch {}
+  }
+
+  playConfirm() {
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.sfxGain) return;
+      const now = ctx.currentTime;
+      // Dual-tone high confirmation chime
+      [587.33, 880.00].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+        gain.gain.setValueAtTime(0.28, now + idx * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.12);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(now + idx * 0.04);
+        osc.stop(now + idx * 0.04 + 0.13);
+      });
+    } catch {}
+  }
+
+  playCancel() {
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.sfxGain) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(160, now + 0.07);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } catch {}
+  }
+
+  playSelect() {
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.sfxGain) return;
+      const now = ctx.currentTime;
+      // High-energy lock-in whoosh + chord
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(780, now + 0.14);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch {}
+  }
+
+  playCountdown(final = false) {
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.sfxGain) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(final ? 880 : 440, now);
+      gain.gain.setValueAtTime(final ? 0.45 : 0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + (final ? 0.35 : 0.12));
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + (final ? 0.36 : 0.13));
+    } catch {}
+  }
+
+  // --- Procedural Synthwave BGM Engine ---
+
+  startBGM(track = 'menu') {
+    this.currentTrack = track;
+    try {
+      if (this.bgmTimer) {
+        clearInterval(this.bgmTimer);
+        this.bgmTimer = null;
+      }
+      const ctx = this.ensureContext();
+      if (!ctx || !this.musicGain) return;
+
+      this.bgmStep = 0;
+      this.bgmNextTime = ctx.currentTime + 0.08;
+
+      const tempo = track === 'combat' ? 134 : track === 'victory' ? 124 : 112;
+      const stepDuration = 60 / tempo / 4; // 16th-note step
+
+      this.bgmTimer = setInterval(() => {
+        try {
+          if (!this.ctx || this.currentTrack !== track) return;
+          const scheduleAhead = this.ctx.currentTime + 0.28;
+          while (this.bgmNextTime < scheduleAhead) {
+            this.scheduleBGMStep(track, this.bgmStep, this.bgmNextTime, stepDuration);
+            this.bgmNextTime += stepDuration;
+            this.bgmStep = (this.bgmStep + 1) % 64; // 4-bar 16th loop
+          }
+        } catch {}
+      }, 50);
+    } catch {}
+  }
+
+  stopBGM() {
+    this.currentTrack = null;
+    try {
+      if (this.bgmTimer) {
+        clearInterval(this.bgmTimer);
+        this.bgmTimer = null;
+      }
+    } catch {}
+  }
+
+  scheduleBGMStep(track, step, time, stepDur) {
+    if (!this.ctx || !this.musicGain) return;
+
+    if (track === 'menu') {
+      // 1. Chill Cyberpunk Arp & Bass (112 BPM)
+      // Kick on beat 1 and 3 (step 0, 16, 32, 48)
+      if (step % 16 === 0) {
+        this.synthKick(time, 0.45, 0.14);
+      }
+      // Hi-hat on every 8th note
+      if (step % 2 === 0) {
+        this.synthHat(time, step % 8 === 4 ? 0.15 : 0.08, 0.04);
+      }
+      // Bassline on root steps (A minor -> D minor -> F major -> E minor)
+      const bassNotes = [55, 73.4, 43.6, 82.4]; // A1, D2, F1, E2
+      const bar = Math.floor(step / 16);
+      if (step % 4 === 0) {
+        const note = bassNotes[bar];
+        this.synthTone(time, note, 'sawtooth', stepDur * 2.8, 0.22, 280);
+      }
+      // Synth Pluck Arpeggio
+      const scale = [220, 261.6, 329.6, 392, 440, 523.2, 392, 329.6];
+      const arpNote = scale[step % scale.length];
+      if (step % 2 === 0) {
+        this.synthTone(time, arpNote, 'sine', stepDur * 1.5, 0.14, 1400);
+      }
+    } else if (track === 'combat') {
+      // 2. High-Energy Fighting Cyber-Techno (134 BPM)
+      // 4-on-the-floor driving kick drum
+      if (step % 4 === 0) {
+        this.synthKick(time, 0.70, 0.16);
+      }
+      // Snare / Clap on beats 2 and 4 (steps 4, 12, 20, 28...)
+      if (step % 8 === 4) {
+        this.synthSnare(time, 0.38);
+      }
+      // Offbeat hi-hat (steps 2, 6, 10, 14...)
+      if (step % 4 === 2) {
+        this.synthHat(time, 0.18, 0.06);
+      }
+      // Driving 16th rolling synth bass
+      const combatRoots = [65.4, 77.8, 87.3, 98.0]; // C2, Eb2, F2, G2
+      const cBar = Math.floor(step / 16);
+      const root = combatRoots[cBar];
+      const oct = (step % 4 === 2 || step % 4 === 3) ? root * 2 : root;
+      this.synthTone(time, oct, 'sawtooth', stepDur * 0.85, 0.28, 450);
+
+      // Cyber Synth Stabs on offbeats
+      if (step % 8 === 2 || step % 8 === 6) {
+        this.synthTone(time, root * 4, 'square', stepDur * 1.1, 0.18, 1800);
+      }
+    } else if (track === 'victory') {
+      // 3. Triumphant Fanfare Celebration (124 BPM)
+      if (step % 4 === 0) {
+        this.synthKick(time, 0.5, 0.18);
+      }
+      if (step % 8 === 4) {
+        this.synthSnare(time, 0.35);
+      }
+      const victoryChords = [
+        [587.33, 739.99, 880.00], // D major
+        [659.25, 783.99, 987.77], // E minor
+        [739.99, 880.00, 1108.73], // F# minor
+        [880.00, 1108.73, 1318.51] // A major
+      ];
+      const vBar = Math.floor(step / 16);
+      if (step % 8 === 0) {
+        const chord = victoryChords[vBar];
+        chord.forEach(freq => {
+          this.synthTone(time, freq, 'triangle', stepDur * 4, 0.16, 2200);
+        });
+      }
+    }
+  }
+
+  synthKick(time, gainVal, decay) {
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(145, time);
+      osc.frequency.exponentialRampToValueAtTime(36, time + decay);
+      gain.gain.setValueAtTime(gainVal, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
+      osc.connect(gain);
+      gain.connect(this.musicGain);
+      osc.start(time);
+      osc.stop(time + decay + 0.01);
+    } catch {}
+  }
+
+  synthSnare(time, gainVal) {
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240, time);
+      osc.frequency.exponentialRampToValueAtTime(80, time + 0.12);
+      gain.gain.setValueAtTime(gainVal, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+      osc.connect(gain);
+      gain.connect(this.musicGain);
+      osc.start(time);
+      osc.stop(time + 0.13);
+    } catch {}
+  }
+
+  synthHat(time, gainVal, dur) {
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(6500, time);
+      gain.gain.setValueAtTime(gainVal, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+      osc.connect(gain);
+      gain.connect(this.musicGain);
+      osc.start(time);
+      osc.stop(time + dur + 0.01);
+    } catch {}
+  }
+
+  synthTone(time, freq, type, dur, gainVal, filterFreq = 0) {
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, time);
+
+      gain.gain.setValueAtTime(gainVal, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+
+      if (filterFreq > 0 && this.ctx.createBiquadFilter) {
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(filterFreq, time);
+        osc.connect(filter);
+        filter.connect(gain);
+      } else {
+        osc.connect(gain);
+      }
+
+      gain.connect(this.musicGain);
+      osc.start(time);
+      osc.stop(time + dur + 0.01);
+    } catch {}
+  }
 }
 
 export const audioManager = new AudioManager();

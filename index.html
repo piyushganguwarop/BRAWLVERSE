@@ -45,16 +45,139 @@
     <section id="menu-shell" class="menu-shell" hidden aria-label="Main game menu">
       <div class="menu-frame">
         <section data-menu-screen="home" class="menu-screen">
-          <div class="menu-brand"><span class="brand-mark">BW</span><span>BRAWL WARS</span><small>CREATE · COMPETE · CONQUER</small></div>
-          <div class="menu-home-grid"><div class="menu-copy"><p class="eyebrow">YOUR FIGHT. YOUR RULES.</p><h1>BUILD YOUR FIGHTER.<br><em>OWN THE ARENA.</em></h1><p class="menu-lead">Create a champion, choose a style and step into the fight.</p><div class="menu-primary-actions"><button data-go="arcade" class="menu-button primary">PLAY ARCADE <b>↗</b></button><button data-go="online" class="menu-button">ONLINE FIGHT</button><button data-go="local" class="menu-button">LOCAL VERSUS</button><button data-go="training" class="menu-button">TRAINING</button></div></div><div class="menu-hero"><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><div class="hero-silhouette"><span></span><i></i><b></b></div><div class="hero-caption"><strong>CREATE YOUR LEGEND</strong><small>YOUR CUSTOM FIGHTER TAKES CENTER STAGE</small></div></div></div>
-          <footer class="menu-footer"><button data-go="creator">✦ FIGHTER CREATOR</button><button data-go="profile">PROFILE</button><button data-go="settings">SETTINGS</button><span id="menu-status" role="status">Ready to fight.</span><small>BRAWL WARS · EARLY ACCESS</small></footer>
+          <div class="menu-brand">
+            <span class="brand-mark">BW</span>
+            <span class="brand-text">BRAWL WARS</span>
+            <span class="brand-sub">ANIME 3D BRAWLER</span>
+            <div class="menu-quick-dossier" id="menu-quick-dossier">
+              <span class="dossier-level" id="menu-dossier-level">LVL 1</span>
+              <span class="dossier-coins" id="menu-dossier-coins">🪙 0</span>
+              <span class="dossier-fighter" id="menu-dossier-fighter">ATLAS</span>
+            </div>
+          </div>
+          <div class="menu-home-grid">
+            <div class="menu-copy">
+              <p class="eyebrow">TACTICAL 3D COMBAT · BUILD YOUR LEGEND</p>
+              <h1>ENTER THE<br><em>BRAWLVERSE</em></h1>
+              <p class="menu-lead">Master fluid 3D movement, combo cancels, and signature anime specials. Choose a mode and own the arena.</p>
+              <div class="menu-primary-actions">
+                <button data-go="arcade" class="menu-button primary mode-arcade">
+                  <span class="btn-kanji">アーケード</span>
+                  <span class="btn-title">PLAY ARCADE</span>
+                  <span class="btn-sub">Solo Ladder Run</span>
+                  <b>↗</b>
+                </button>
+                <button data-go="local" class="menu-button mode-local">
+                  <span class="btn-kanji">対戦</span>
+                  <span class="btn-title">LOCAL VERSUS</span>
+                  <span class="btn-sub">2 Players 1 Screen</span>
+                </button>
+                <button data-go="training" class="menu-button mode-training">
+                  <span class="btn-kanji">練習</span>
+                  <span class="btn-title">TRAINING LAB</span>
+                  <span class="btn-sub">Practice Combos</span>
+                </button>
+                <button data-go="online" class="menu-button mode-online">
+                  <span class="btn-kanji">通信</span>
+                  <span class="btn-title">ONLINE FIGHT</span>
+                  <span class="btn-sub">P2P Room Match</span>
+                </button>
+              </div>
+            </div>
+            <div class="menu-hero" id="menu-hero-showcase">
+              <div class="hero-3d-stage" id="menu-3d-canvas"></div>
+              <div class="hero-caption">
+                <strong id="menu-hero-name">ATLAS · THE HEAVYWEIGHT</strong>
+                <small id="menu-hero-style">BALANCED · TITAN ENERGY GAUNTLET</small>
+              </div>
+            </div>
+          </div>
+          <footer class="menu-footer">
+            <button data-go="creator" class="footer-btn">✦ FIGHTER WORKSHOP</button>
+            <button data-go="profile" class="footer-btn">DOSSIER & HISTORY</button>
+            <button data-go="settings" class="footer-btn">SETTINGS</button>
+            <span id="menu-status" role="status">Ready for combat.</span>
+            <small>BRAWL WARS V2 · PRODUCTION</small>
+          </footer>
         </section>
-        <section data-menu-screen="settings" class="menu-screen sub-screen" hidden><button class="menu-back" data-back="home">← BACK</button><p class="eyebrow">PREFERENCES</p><h2>SETTINGS</h2><div class="settings-grid"><label>Master volume <output>80%</output><input id="setting-master" type="range" min="0" max="100" value="80"></label><label>Music volume<output>65%</output><input id="setting-music" type="range" min="0" max="100" value="65"></label><label>Effects volume<output>85%</output><input id="setting-effects" type="range" min="0" max="100" value="85"></label><label class="toggle-setting">Reduce screen shake<input id="setting-shake" type="checkbox"></label><label>Graphics quality<select id="setting-quality"><option value="low">Low · mobile friendly</option><option value="medium">Medium</option><option value="high">High · best visuals</option></select></label><label class="toggle-setting">Fullscreen<input id="setting-fullscreen" type="checkbox"></label></div><p class="menu-note">Preferences save on this device. Graphics quality applies when a fight scene starts. Master, music, and sound effects volumes are actively mixed via the Web Audio engine.</p></section>
+        <section data-menu-screen="settings" class="menu-screen sub-screen" hidden>
+          <button class="menu-back" data-back="home">← BACK</button>
+          <p class="eyebrow">PREFERENCES</p>
+          <h2>SETTINGS</h2>
+          <div class="settings-grid">
+            <label>Master volume <output>80%</output><input id="setting-master" type="range" min="0" max="100" value="80"></label>
+            <label>Music volume<output>65%</output><input id="setting-music" type="range" min="0" max="100" value="65"></label>
+            <label>Effects volume<output>85%</output><input id="setting-effects" type="range" min="0" max="100" value="85"></label>
+            <label class="toggle-setting">Reduce screen shake<input id="setting-shake" type="checkbox"></label>
+            <label>Graphics quality<select id="setting-quality"><option value="low">Low · mobile friendly</option><option value="medium">Medium</option><option value="high">High · best visuals</option></select></label>
+            <label class="toggle-setting">Fullscreen<input id="setting-fullscreen" type="checkbox"></label>
+          </div>
+          <div class="controls-guide-card">
+            <p class="eyebrow">COMBAT INPUTS</p>
+            <h3>CONTROLS REFERENCE</h3>
+            <div class="controls-columns">
+              <div class="control-col">
+                <strong>PLAYER 1 (KEYBOARD)</strong>
+                <ul>
+                  <li><span>Move / Jump / Crouch</span><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></li>
+                  <li><span>Dash Evade</span><kbd>Q</kbd> (Back) · <kbd>E</kbd> (Fwd)</li>
+                  <li><span>Light Strikes</span><kbd>J</kbd> (Punch) · <kbd>K</kbd> (Kick)</li>
+                  <li><span>Heavy Strike</span><kbd>I</kbd></li>
+                  <li><span>Throw / Grab</span><kbd>G</kbd></li>
+                  <li><span>Guard / Block</span><kbd>Shift</kbd></li>
+                  <li><span>Super Special (100 Energy)</span><kbd>L</kbd></li>
+                </ul>
+              </div>
+              <div class="control-col">
+                <strong>PLAYER 2 (LOCAL)</strong>
+                <ul>
+                  <li><span>Move / Jump / Crouch</span><kbd>Arrows</kbd> / <kbd>Num 8</kbd></li>
+                  <li><span>Dash Evade</span><kbd>Num 4</kbd> / <kbd>Num 6</kbd></li>
+                  <li><span>Light Strikes</span><kbd>Num 1</kbd> · <kbd>Num 2</kbd></li>
+                  <li><span>Heavy Strike</span><kbd>Num 6</kbd></li>
+                  <li><span>Throw / Grab</span><kbd>Num 3</kbd></li>
+                  <li><span>Guard / Block</span><kbd>Num 0</kbd></li>
+                  <li><span>Super Special (100 Energy)</span><kbd>Num 5</kbd></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <p class="menu-note">Preferences save on this device. Graphics quality applies when a fight scene starts. Master, music, and sound effects volumes are actively mixed via the Web Audio engine.</p>
+        </section>
         <section data-menu-screen="profile" class="menu-screen sub-screen" hidden><button class="menu-back" data-back="home">← BACK</button><p class="eyebrow">LOCAL PLAYER</p><h2>PROFILE</h2><div class="profile-card"><div class="profile-avatar">F</div><div><label>Player name<input id="profile-name" maxlength="18" value="Player"></label><p id="profile-fighters">0 / 3 saved fighters</p><div class="profile-progression"><strong id="profile-level">LEVEL 1</strong><strong id="profile-wallet">0 COINS</strong><p id="profile-xp">0 / 100 XP</p><div class="xp-track"><span id="profile-xp-bar"></span></div><p id="profile-unlocks">3 / 8 fighters · 1 / 3 arenas unlocked</p></div><p id="profile-record">0 matches · 0 wins · 0 losses</p><p>Last selected mode: <strong id="profile-mode">ARCADE</strong></p><div class="profile-history-wrap"><strong>RECENT MATCHES</strong><div id="profile-history" class="profile-history">No matches played yet.</div></div><button id="profile-save" class="menu-button primary">SAVE PROFILE</button></div></div><p class="menu-note">This profile is stored locally. Online account sync and match history are planned for a later milestone.</p></section>
       </div>
     </section>
     <section id="pause-panel" class="modal-shell" hidden aria-label="Pause menu"><div class="modal-card"><p class="eyebrow">MATCH PAUSED</p><h2>TAKE A BREATHER</h2><button id="pause-resume" class="menu-button primary">RESUME FIGHT</button><button id="pause-restart" class="menu-button">RESTART MATCH</button><button id="pause-controls" class="menu-button">CONTROLS</button><button id="pause-settings" class="menu-button">SETTINGS</button><button id="pause-quit" class="menu-button danger">QUIT TO MAIN MENU</button><p id="pause-info" class="menu-note" hidden>Move: A / D or ← / → · Jump: W / ↑ · Punch: J · Kick: K · Grab: G · Block: Shift · Super: L</p><div id="pause-settings-panel" class="pause-settings-panel" hidden><p class="eyebrow">MATCH PREFERENCES</p><h3>SETTINGS</h3><div class="settings-grid pause-settings-grid"><label>Master volume <output id="pause-master-value">80%</output><input id="pause-setting-master" type="range" min="0" max="100" value="80"></label><label>Music volume <output id="pause-music-value">65%</output><input id="pause-setting-music" type="range" min="0" max="100" value="65"></label><label>Effects volume <output id="pause-effects-value">85%</output><input id="pause-setting-effects" type="range" min="0" max="100" value="85"></label><label>Graphics quality<select id="pause-setting-quality"><option value="low">Low · mobile friendly</option><option value="medium">Medium</option><option value="high">High · best visuals</option></select></label><label class="toggle-setting">Reduce screen shake<input id="pause-setting-shake" type="checkbox"></label><label class="toggle-setting">Fullscreen<input id="pause-setting-fullscreen" type="checkbox"></label></div><div class="pause-settings-actions"><button id="pause-settings-back" class="menu-button primary">BACK TO PAUSE</button></div><p class="menu-note">Changes save immediately. Graphics quality applies immediately to this match. Master, music, and sound effects volumes are actively mixed via the Web Audio engine.</p></div></div></section>
-    <section id="results-panel" class="modal-shell" hidden aria-label="Match results"><div class="modal-card results-card"><p class="eyebrow">MATCH COMPLETE</p><h2 id="results-title">VICTORY</h2><p id="results-subtitle">The arena has a new champion.</p><div class="results-score" id="results-score">2 — 0</div><div class="results-actions"><button id="results-rematch" class="menu-button primary">REMATCH</button><button id="results-select" class="menu-button">CHANGE FIGHTER</button><button id="results-menu" class="menu-button">MAIN MENU</button></div></div></section>
+    <section id="results-panel" class="modal-shell" hidden aria-label="Match results">
+      <div class="modal-card results-card">
+        <p class="eyebrow">MATCH COMPLETE</p>
+        <h2 id="results-title">VICTORY</h2>
+        <p id="results-subtitle">The arena has a new champion.</p>
+        <div class="results-score" id="results-score">2 — 0</div>
+        <div class="results-telemetry" id="results-telemetry">
+          <div class="telemetry-badge"><span class="badge-label">DAMAGE</span><strong id="results-stat-damage">0</strong></div>
+          <div class="telemetry-badge"><span class="badge-label">MAX COMBO</span><strong id="results-stat-combo">0 HITS</strong></div>
+          <div class="telemetry-badge"><span class="badge-label">DURATION</span><strong id="results-stat-time">0s</strong></div>
+        </div>
+        <div class="results-reward-box" id="results-reward-box">
+          <div class="reward-xp-head">
+            <span id="results-level-label">LEVEL 1</span>
+            <span id="results-xp-gain">+0 XP</span>
+          </div>
+          <div class="xp-track"><span id="results-xp-bar" style="width: 0%"></span></div>
+          <div class="reward-coins-row">
+            <span>BOUNTY EARNED:</span>
+            <strong id="results-coins-gain">🪙 +0 COINS</strong>
+          </div>
+          <div id="results-levelup-toast" class="levelup-toast" hidden>★ LEVEL UP! NEW CONTENT UNLOCKED ★</div>
+        </div>
+        <div class="results-actions">
+          <button id="results-rematch" class="menu-button primary">REMATCH</button>
+          <button id="results-select" class="menu-button">CHANGE FIGHTER</button>
+          <button id="results-menu" class="menu-button">MAIN MENU</button>
+        </div>
+      </div>
+    </section>
     <section id="online-panel" class="online-panel" hidden aria-label="Online room">
       <div class="online-card"><button id="online-close" class="online-close" aria-label="Close">×</button>
         <h2>ONLINE FIGHT</h2><p id="online-status">Create a room or join a friend.</p>

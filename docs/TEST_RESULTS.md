@@ -1,7 +1,7 @@
 # Brawl Wars - Test & Browser Validation Results Register
 
-**Document Version:** 1.6.0  
-**Phase Milestone:** Phase 6: Initial Four-Fighter Roster (Atlas, Volt, Rook, Myst)  
+**Document Version:** 1.7.0  
+**Phase Milestone:** Phase 7: UI, Progression, Audio and Game Polish  
 **Date of Run:** 2026-11-03  
 **Platform / OS:** Windows 11  
 **Browser Engine:** Microsoft Edge 156.0.4314.58 (Headless Chromium via CDP)  
@@ -11,16 +11,17 @@
 
 ## 1. Automated Test Suite Summary (`npm test`)
 
-- **Total Test Suites Executed:** 33
-- **Total Test Cases:** 174
-- **Passed:** 174 (100%)
+- **Total Test Suites Executed:** 34
+- **Total Test Cases:** 177
+- **Passed:** 177 (100%)
 - **Failed:** 0
-- **Duration:** ~665ms
+- **Duration:** ~670ms
 
 ### Suite Breakdown
 
 | Test Suite | Tests Passed | Key Capabilities Verified |
 | :--- | :--- | :--- |
+| `test/phase7-audio.test.js` | 3/3 | Procedural Web Audio Synthwave BGM engine track lifecycle ('menu', 'combat', 'victory'), responsive UI sound effects (hover, confirm, cancel, select, countdown), volume bus gain clamping & mixing integrity |
 | `test/phase6-roster-interop.test.js` | 4/4 | Initial four-fighter roster integrity (Atlas, Volt, Rook, Myst), 17-state animation verification across all 4 fighters, Arcade/Training/Local Versus mode interoperability, 3D combat hit & special attack registration across all matchup pairs |
 | `test/phase6-myst.test.js` | 3/3 | Myst lithe ethereal model construction, porcelain half-mask, split-tail phantom duster coat, rotating holographic glyph rings, 17-state animation evaluation (floating idle, teleport glide dash, astral glyph shield block, crescent sweep kick, phantom pulse special, levitation victory), technical archetype stats |
 | `test/phase6-rook.test.js` | 3/3 | Rook colossus model construction (1.14x scale), blast helm with crimson slit, hydraulic piston gauntlets and steam vents, 17-state animation evaluation (sumo idle guard, bull charge dash, twin buckler fortress shield lock, sledgehammer heavy, iron fortress special), tank archetype stats |
@@ -50,6 +51,30 @@
 ---
 
 ## 2. In-Browser Headless CDP Gameplay Verifications
+
+### 2.0 Phase 7 Commercial UI, Audio & Progression 15-Screen Audit (`scripts/capture-audit-screenshots.js`)
+- **Host / Browser:** Microsoft Edge Headless via Chrome DevTools Protocol
+- **Port:** HTTP 5186 (serving production `dist/`)
+- **Output Directory:** `docs/audit_screenshots/` (15 PNGs)
+- **Status:** 15/15 Screens Successfully Captured & Verified (100%)
+
+| File | Screen / Viewport | Result | Verified Features |
+| :--- | :--- | :--- | :--- |
+| `01_main_menu.png` | Main Menu (Desktop 1280x640) | ✔ PASS | Live 3D Atlas on cyber pedestal, quick dossier strip (LVL 2, 60 Coins, Atlas), angular Japanese-cyberpunk buttons with kanji and description, active champion title |
+| `02_settings_screen.png` | Settings Sub-Screen | ✔ PASS | Master/Music/Effects volume sliders, reduce shake toggle, graphics quality selector, fullscreen toggle, full tactical controls reference card |
+| `03_player_profile.png` | Player Profile & History | ✔ PASS | Fighter license dossier, career win/loss record, level XP progress track, color-coded match history rows (emerald WIN / crimson LOSS badges) |
+| `04_fighter_creator.png` | Fighter Workshop (Creator) | ✔ PASS | Full 3D customizer preview with head and torso connected, appearance dropdowns, color pickers, slot save/load buttons |
+| `05_fighter_select_atlas.png` | Fighter Select (Atlas) | ✔ PASS | Live 3D Atlas preview with Titan Gauntlet, archetype badge (BALANCED), arena preview (Neon District), CPU difficulty selector, Start Fight button |
+| `06_fighter_select_volt.png` | Fighter Select (Volt) | ✔ PASS | Live 3D Volt preview with neon cyber visor and dual shock blades, speed archetype badge (FAST/RUSHDOWN), stat display |
+| `07_fighter_select_rook.png` | Fighter Select (Rook) | ✔ PASS | Live 3D Rook preview with towering colossus chassis and hydraulic piston fists, tank archetype badge (TANK) |
+| `08_stage_select_temple.png` | Arena Selection | ✔ PASS | Stage cycling, unlock enforcement, atmospheric lighting, scanlines, and audio cues |
+| `09_fight_hud_in_match.png` | Match Combat HUD | ✔ PASS | Live 3D fight in Neon District arena, angled lifebars with active yellow ghost damage drainage, segmented glowing energy meter, digital timer, round counter |
+| `10_pause_menu.png` | In-Match Pause Menu | ✔ PASS | Frosted glass dark modal, resume, restart, controls, settings, and quit actions |
+| `11_pause_settings.png` | In-Match Pause Settings | ✔ PASS | Immediate volume mixing sliders, graphics quality adjustments, reduce shake toggle |
+| `12_match_victory_results.png` | Match Results Celebration | ✔ PASS | Commercial victory celebration, match telemetry cards (Damage, Max Combo, Time), animated XP bar track, coin bounty reward fanfare |
+| `13_training_lab_hud.png` | Training Lab HUD | ✔ PASS | Floating control panel, dummy AI selector (Stationary/Guard/Attack), infinite health/energy toggles, reset position hotkeys, real-time damage telemetry |
+| `14_mobile_fight_touch.png` | Mobile Combat (390x844) | ✔ PASS | Responsive mobile portrait layout, virtual directional cluster, 6-action attack pad (Punch, Kick, Heavy, Grab, Block, Super), safe-area padding |
+| `15_mobile_main_menu.png` | Mobile Main Menu (390x844) | ✔ PASS | Responsive champion showcase, stacked Japanese-cyberpunk action cards, quick dossier badges |
 
 ### 2.1 Phase 6.4 Roster Previews & Offline Modes Interoperability (`scripts/verify-phase6-roster-modes.js`)
 - **Host / Browser:** Microsoft Edge Headless via Chrome DevTools Protocol

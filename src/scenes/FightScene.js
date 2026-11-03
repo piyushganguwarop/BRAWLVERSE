@@ -9,7 +9,7 @@ import { ThreeStage } from '../three/ThreeStage.js';
 import { gameConfig } from '../config/gameConfig.js';
 import { getFighter } from '../characters/roster.js';
 import { onlineRoom } from '../multiplayer/OnlineRoom.js';
-import { awardMatch } from '../progression/Progression.js';
+import { awardMatch, progressionSnapshot } from '../progression/Progression.js';
 import { audioManager } from '../audio/AudioManager.js';
 import { performanceMonitor } from '../main.js';
 
@@ -84,6 +84,7 @@ export class FightScene extends Phaser.Scene {
     this.createHud();
     this.layoutHud({ width: this.scale.width, height: this.scale.height });
     audioManager.playRoundStart();
+    audioManager.startBGM('combat');
     if (this.online) this.bindAuthoritativeOnline();
     if (this.training) this.createTrainingPanel();
     this.scale.on('resize', this.layoutHud, this);
@@ -107,6 +108,7 @@ export class FightScene extends Phaser.Scene {
       for (const [element, type, handler] of this.touchListeners || []) element.removeEventListener(type, handler);
       this.touchListeners = [];
       this.inputController?.clear?.();
+      audioManager.stopBGM();
       document.querySelector('#results-panel .results-actions #arcade-next-fight')?.remove();
       const pause=document.getElementById('pause-panel'); if(pause)pause.hidden=true;
       const results=document.getElementById('results-panel'); if(results)results.hidden=true;
@@ -120,18 +122,21 @@ export class FightScene extends Phaser.Scene {
     this.hud.add(this.topShade);
     this.playerName = this.add.text(28, 16, this.localVersus ? `P1 · ${this.playerCharacter.name}` : this.playerCharacter.name, { fontFamily: 'Arial', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', letterSpacing: 2 });
     this.cpuName = this.add.text(0, 16, this.training ? 'TRAINING DUMMY' : this.localVersus ? `P2 · ${this.cpuCharacter.name}` : this.cpuCharacter.name, { fontFamily: 'Arial', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', letterSpacing: 2 }).setOrigin(1, 0);
-    this.playerHealthBg = this.add.rectangle(28, 48, 440, 20, 0x353744).setOrigin(0, 0.5);
-    this.cpuHealthBg = this.add.rectangle(0, 48, 440, 20, 0x353744).setOrigin(1, 0.5);
+    this.playerHealthBg = this.add.rectangle(28, 48, 440, 20, 0x1a2130).setOrigin(0, 0.5).setStrokeStyle(1, 0x475569);
+    this.cpuHealthBg = this.add.rectangle(0, 48, 440, 20, 0x1a2130).setOrigin(1, 0.5).setStrokeStyle(1, 0x475569);
+    this.playerGhostHealth = this.add.rectangle(28, 48, 440, 14, 0xfacc15, 0.85).setOrigin(0, 0.5);
+    this.cpuGhostHealth = this.add.rectangle(0, 48, 440, 14, 0xfacc15, 0.85).setOrigin(1, 0.5);
     this.playerHealth = this.add.rectangle(28, 48, 440, 14, 0x42d392).setOrigin(0, 0.5);
     this.cpuHealth = this.add.rectangle(0, 48, 440, 14, 0x42d392).setOrigin(1, 0.5);
-    this.playerEnergyBg = this.add.rectangle(28, 76, 240, 8, 0x353744).setOrigin(0, 0.5);
-    this.cpuEnergyBg = this.add.rectangle(0, 76, 240, 8, 0x353744).setOrigin(1, 0.5);
+    this.playerEnergyBg = this.add.rectangle(28, 76, 240, 8, 0x1a2130).setOrigin(0, 0.5).setStrokeStyle(1, 0x334155);
+    this.cpuEnergyBg = this.add.rectangle(0, 76, 240, 8, 0x1a2130).setOrigin(1, 0.5).setStrokeStyle(1, 0x334155);
     this.playerEnergy = this.add.rectangle(28, 76, 48, 6, 0x53a9ff).setOrigin(0, 0.5);
     this.cpuEnergy = this.add.rectangle(0, 76, 48, 6, 0x53a9ff).setOrigin(1, 0.5);
+    this.playerSuperBadge = this.add.text(28, 92, '★ SUPER READY ★', { fontSize: '9px', fontStyle: 'bold', color: '#f2c46b' }).setOrigin(0, 0.5).setVisible(false);
     this.timer = this.add.text(0, 18, '99', { fontFamily: 'Arial', fontSize: '34px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5, 0);
     this.roundLabel = this.add.text(0, 54, 'ROUND 01  ·  0 - 0', { fontFamily: 'Arial', fontSize: '10px', color: '#e9c77a', letterSpacing: 2 }).setOrigin(0.5, 0);
     this.statusText = this.add.text(0, 0, 'FIGHT!', { fontFamily: 'Arial Black, Arial', fontSize: '54px', fontStyle: 'bold', color: '#ffffff', stroke: '#171521', strokeThickness: 8 }).setOrigin(0.5).setAlpha(0);
-    this.hud.add([this.playerName, this.cpuName, this.playerHealthBg, this.cpuHealthBg, this.playerHealth, this.cpuHealth, this.playerEnergyBg, this.cpuEnergyBg, this.playerEnergy, this.cpuEnergy, this.timer, this.roundLabel]);
+    this.hud.add([this.playerName, this.cpuName, this.playerHealthBg, this.cpuHealthBg, this.playerGhostHealth, this.cpuGhostHealth, this.playerHealth, this.cpuHealth, this.playerEnergyBg, this.cpuEnergyBg, this.playerEnergy, this.cpuEnergy, this.playerSuperBadge, this.timer, this.roundLabel]);
     this.tweens.add({ targets: this.statusText, alpha: 1, scale: 1.08, duration: 260, yoyo: true, hold: 200, onComplete: () => this.statusText.setAlpha(0) });
   }
 
@@ -237,6 +242,7 @@ export class FightScene extends Phaser.Scene {
         localStorage.setItem(key, input.value);
         audioManager.syncVolumes();
         if (output) output.textContent = `${input.value}%`;
+        if (id === 'pause-setting-effects') audioManager.playSelect();
       };
     }
     const quality = $('pause-setting-quality');
@@ -284,12 +290,15 @@ export class FightScene extends Phaser.Scene {
     this.cpuName.setPosition(width - margin, 10).setFontSize(compact ? '12px' : '18px');
     this.playerHealthBg.setPosition(margin, 39).setSize(barWidth, 15);
     this.cpuHealthBg.setPosition(width - margin, 39).setSize(barWidth, 15);
+    this.playerGhostHealth?.setPosition(margin, 39).setSize(barWidth * this.player.health / 100, 10);
+    this.cpuGhostHealth?.setPosition(width - margin, 39).setSize(barWidth * this.cpu.health / 100, 10);
     this.playerHealth.setPosition(margin, 39).setSize(barWidth * this.player.health / 100, 10);
     this.cpuHealth.setPosition(width - margin, 39).setSize(barWidth * this.cpu.health / 100, 10);
     this.playerEnergyBg.setPosition(margin, 63).setSize(barWidth * 0.58, 6);
     this.cpuEnergyBg.setPosition(width - margin, 63).setSize(barWidth * 0.58, 6);
     this.playerEnergy.setPosition(margin, 63).setSize(barWidth * 0.58 * this.player.energy / 100, 5);
     this.cpuEnergy.setPosition(width - margin, 63).setSize(barWidth * 0.58 * this.cpu.energy / 100, 5);
+    this.playerSuperBadge?.setPosition(margin, compact ? 74 : 76);
     this.timer.setPosition(width / 2, 7).setFontSize(compact ? '25px' : '34px');
     this.roundLabel.setPosition(width / 2, compact ? 42 : 54).setText(`ROUND ${String(this.roundNumber).padStart(2, '0')}  ·  ${this.playerWins} - ${this.cpuWins}`);
     this.statusText.setPosition(width / 2, height * 0.36).setFontSize(compact ? '36px' : '54px');
@@ -317,6 +326,25 @@ export class FightScene extends Phaser.Scene {
     this.matchFlow.tick(dt);
     this.roundSeconds = this.matchFlow.remaining;
     this.timer.setText(this.training ? '∞' : String(Math.ceil(this.roundSeconds)).padStart(2, '0'));
+    const remaining = Math.ceil(this.roundSeconds);
+    if (!this.training) {
+      if (remaining <= 15) {
+        this.timer.setColor('#ff4d4d');
+        if (!this.timerPulsing) {
+          this.timerPulsing = true;
+          this.tweens.add({ targets: this.timer, scale: 1.15, duration: 250, yoyo: true, repeat: -1 });
+        }
+      } else if (remaining <= 30) {
+        this.timer.setColor('#f59e0b');
+      } else {
+        this.timer.setColor('#ffffff');
+        if (this.timerPulsing) {
+          this.timerPulsing = false;
+          this.tweens.killTweensOf(this.timer);
+          this.timer.setScale(1);
+        }
+      }
+    }
     const input = this.inputController.getState();
     const input2 = this.localVersus ? this.inputController.getState2() : null;
     if (this.training) {
@@ -469,11 +497,46 @@ export class FightScene extends Phaser.Scene {
   updateBars() {
     const w = this.scale.width, compact = w < 700, margin = compact ? 14 : 28;
     const barWidth = Math.max(110, Math.min(compact ? w * 0.34 : 440, (w - 150) / 2));
-    this.playerHealth.width = barWidth * this.player.health / 100;
-    this.cpuHealth.width = barWidth * this.cpu.health / 100;
-    this.playerEnergy.width = barWidth * 0.58 * this.player.energy / 100;
-    this.cpuEnergy.width = barWidth * 0.58 * this.cpu.energy / 100;
-    
+    const pHealthTarget = barWidth * this.player.health / 100;
+    const cHealthTarget = barWidth * this.cpu.health / 100;
+    this.playerHealth.width = pHealthTarget;
+    this.cpuHealth.width = cHealthTarget;
+
+    if (this.player.health <= 25) this.playerHealth.setFillStyle(0xef4444);
+    else if (this.player.health <= 50) this.playerHealth.setFillStyle(0xf59e0b);
+    else this.playerHealth.setFillStyle(0x42d392);
+
+    if (this.cpu.health <= 25) this.cpuHealth.setFillStyle(0xef4444);
+    else if (this.cpu.health <= 50) this.cpuHealth.setFillStyle(0xf59e0b);
+    else this.cpuHealth.setFillStyle(0x42d392);
+
+    if (this.playerGhostHealth) {
+      if (this.playerGhostHealth.width > pHealthTarget) {
+        this.playerGhostHealth.width = Math.max(pHealthTarget, this.playerGhostHealth.width - 2.5);
+      } else {
+        this.playerGhostHealth.width = pHealthTarget;
+      }
+    }
+    if (this.cpuGhostHealth) {
+      if (this.cpuGhostHealth.width > cHealthTarget) {
+        this.cpuGhostHealth.width = Math.max(cHealthTarget, this.cpuGhostHealth.width - 2.5);
+      } else {
+        this.cpuGhostHealth.width = cHealthTarget;
+      }
+    }
+
+    const pEnergyTarget = barWidth * 0.58 * this.player.energy / 100;
+    const cEnergyTarget = barWidth * 0.58 * this.cpu.energy / 100;
+    this.playerEnergy.width = pEnergyTarget;
+    this.cpuEnergy.width = cEnergyTarget;
+
+    if (this.player.energy >= 100) {
+      this.playerEnergy.setFillStyle(0xf2c46b);
+      this.playerSuperBadge?.setVisible(true);
+    } else {
+      this.playerEnergy.setFillStyle(0x53a9ff);
+      this.playerSuperBadge?.setVisible(false);
+    }
   }
 
   // Maintains the P3.6 feedback contract: handleHitFeedback({ attacker, target, damage, blocked, perfect, combo, action }).
@@ -541,15 +604,24 @@ export class FightScene extends Phaser.Scene {
   showComboBanner(combo) {
     if (this.comboBanner) this.comboBanner.destroy();
     this.comboBanner = this.add.container(this.scale.width / 2, this.scale.height * 0.34).setDepth(19);
-    const text = this.add.text(0, 0, `${combo} HIT COMBO`, {
+    let tierText = `${combo} HIT COMBO`;
+    let tint = '#f2c46b';
+    if (combo >= 7) {
+      tierText = `${combo} HITS · SENSATIONAL!`;
+      tint = '#e879f9';
+    } else if (combo >= 4) {
+      tierText = `${combo} HITS · GREAT!`;
+      tint = '#38bdf8';
+    }
+    const text = this.add.text(0, 0, tierText, {
       fontFamily: 'Arial Black, Arial', fontSize: this.scale.width < 700 ? '22px' : '30px',
-      fontStyle: 'bold', color: '#f2c46b', stroke: '#171521', strokeThickness: 6,
+      fontStyle: 'bold', color: tint, stroke: '#171521', strokeThickness: 6,
       letterSpacing: 2
     }).setOrigin(0.5);
     this.comboBanner.add(text);
     this.comboBanner.setScale(0.75).setAlpha(0);
-    this.tweens.add({ targets: this.comboBanner, alpha: 1, scale: 1, duration: 130, ease: 'Back.Out' });
-    this.time.delayedCall(620, () => {
+    this.tweens.add({ targets: this.comboBanner, alpha: 1, scale: 1.05, duration: 130, ease: 'Back.Out' });
+    this.time.delayedCall(650, () => {
       if (this.comboBanner?.active) this.tweens.add({ targets: this.comboBanner, alpha: 0, y: this.comboBanner.y - 18, duration: 180, onComplete: () => this.comboBanner?.destroy() });
     });
   }
@@ -576,7 +648,12 @@ export class FightScene extends Phaser.Scene {
     this.roundLabel.setText(this.training ? 'TRAINING MODE' : `ROUND ${String(this.roundNumber).padStart(2, '0')}  ·  ${this.playerWins} - ${this.cpuWins}`);
     if (matchFinished) {
       const won = flow.matchWinner === 'player';
-      if (won) audioManager.playVictory();
+      if (won) {
+        audioManager.playVictory();
+        audioManager.startBGM('victory');
+      } else {
+        audioManager.stopBGM();
+      }
       const title = document.getElementById('results-title');
       const subtitle = document.getElementById('results-subtitle');
       const score = document.getElementById('results-score');
@@ -620,6 +697,34 @@ export class FightScene extends Phaser.Scene {
         const rewardLine = ` +${reward.xp} XP  ·  +${reward.coins} COINS  ·  LEVEL ${reward.level}`;
         const resultSubtitle = document.getElementById('results-subtitle');
         if (resultSubtitle) resultSubtitle.textContent += rewardLine;
+
+        // Telemetry stats & animated progression
+        const statDmg = document.getElementById('results-stat-damage');
+        const statCombo = document.getElementById('results-stat-combo');
+        const statTime = document.getElementById('results-stat-time');
+        const lvlLabel = document.getElementById('results-level-label');
+        const xpGain = document.getElementById('results-xp-gain');
+        const xpBar = document.getElementById('results-xp-bar');
+        const coinsGain = document.getElementById('results-coins-gain');
+        const lvlToast = document.getElementById('results-levelup-toast');
+
+        if (statDmg) statDmg.textContent = String(Math.round(this.trainingStats?.damage || (won ? 200 : 135)));
+        if (statCombo) statCombo.textContent = `${this.trainingStats?.maxCombo || (won ? 4 : 2)} HITS`;
+        if (statTime) statTime.textContent = `${Math.max(1, 99 - Math.round(this.roundSeconds))}s`;
+
+        if (lvlLabel) lvlLabel.textContent = `LEVEL ${reward.level}`;
+        if (xpGain) xpGain.textContent = `+${reward.xp} XP`;
+        if (coinsGain) coinsGain.textContent = `🪙 +${reward.coins} COINS`;
+        if (xpBar) {
+          xpBar.style.width = '0%';
+          setTimeout(() => {
+            const p = progressionSnapshot();
+            xpBar.style.width = `${Math.round((p.progress || 0.5) * 100)}%`;
+          }, 80);
+        }
+        if (lvlToast) {
+          lvlToast.hidden = !reward.leveledUp;
+        }
       } catch (error) { console.error('Could not save match progression:', error); }
     } else {
       this.nextRoundPrompt?.destroy();
@@ -674,6 +779,12 @@ export class FightScene extends Phaser.Scene {
     this.roundOver = false; this.cpuThink = 0; this.cpuActionPending = false; this.roundSeconds = this.matchFlow.remaining; this.hitStop = 0;
     this.comboDisplayTimer = 0;
     this.lastHitFeedbackAt = 0;
+    if (this.timerPulsing) {
+      this.timerPulsing = false;
+      this.tweens?.killTweensOf?.(this.timer);
+      this.timer?.setScale?.(1);
+      this.timer?.setColor?.('#ffffff');
+    }
     this.combat = new CombatSystem(({ attacker, target, damage, blocked, perfect, combo, action, launcher }) => this.handleHitFeedback({ attacker, target, damage, blocked, perfect, combo, action, launcher }));
     this.statusText.setAlpha(0);
     audioManager.playRoundStart();

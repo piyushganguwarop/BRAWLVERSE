@@ -5,6 +5,7 @@ import { hasCustomFighter, loadCustomFighter, loadSlots, saveCustomFighter, toFi
 import { CustomizerPreview } from '../characters/CustomizerPreview.js';
 import { ArcadeProgression } from '../modes/ArcadeProgression.js';
 import { loadProgression, isFighterUnlocked, isStageUnlocked, purchaseFighter, purchaseStage, progressionSnapshot } from '../progression/Progression.js';
+import { audioManager } from '../audio/AudioManager.js';
 
 const COLORS = { bg: 0x10131d, panel: 0x1b2030, muted: '#9ca8bd', gold: '#f2c46b', white: '#f5f7fb' };
 
@@ -20,6 +21,7 @@ export class SelectScene extends Phaser.Scene {
   create() {
     const touchControls = document.getElementById('touch-controls');
     if (touchControls) touchControls.style.display = 'none';
+    audioManager.startBGM('menu');
     this.selectedIndex = 0;
     this.stageIndex = 0;
     this.progression = progressionSnapshot();
@@ -43,10 +45,10 @@ export class SelectScene extends Phaser.Scene {
     this.stageDesc = this.add.text(0, 0, '', { fontSize: '10px', color: '#b9c5d8' }).setOrigin(0.5);
     this.stagePrev = this.add.text(0, 0, '‹', { fontSize: '27px', color: '#ffffff', backgroundColor: '#252c40', padding: { x: 12, y: 3 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     this.stageNext = this.add.text(0, 0, '›', { fontSize: '27px', color: '#ffffff', backgroundColor: '#252c40', padding: { x: 12, y: 3 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.stagePrev.on('pointerdown', () => this.changeStage(-1));
-    this.stageNext.on('pointerdown', () => this.changeStage(1));
+    this.stagePrev.on('pointerdown', () => { audioManager.playHover(); this.changeStage(-1); });
+    this.stageNext.on('pointerdown', () => { audioManager.playHover(); this.changeStage(1); });
     this.startButton = this.add.text(0, 0, this.mode === 'training' ? 'ENTER LAB  →' : 'START FIGHT  →', { fontSize: '17px', fontStyle: 'bold', color: '#141722', backgroundColor: '#f2c46b', padding: { x: 25, y: 15 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.startButton.on('pointerdown', () => this.startFight());
+    this.startButton.on('pointerdown', () => { audioManager.playConfirm(); this.startFight(); });
     this.createDifficultySelector();
     if (this.localVersus) this.createPlayerTwoSelector();
     this.hint = this.add.text(0, 0, 'PC: CLICK TO SELECT  •  MOBILE: TAP A FIGHTER', { fontSize: '10px', color: COLORS.muted, letterSpacing: 1 }).setOrigin(0.5);
@@ -56,7 +58,7 @@ export class SelectScene extends Phaser.Scene {
     this.createOnlineButton();
     this.createCreatorButton();
     this.menuBackButton = this.add.text(0, 0, '← MENU', { fontSize: '12px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#252c40', padding: { x: 12, y: 9 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    this.menuBackButton.on('pointerdown', () => this.scene.start('MainMenuScene'));
+    this.menuBackButton.on('pointerdown', () => { audioManager.playCancel(); this.scene.start('MainMenuScene'); });
     this.select(0);
     this.updateStageLabel();
     this.scale.on('resize', this.layout, this);
@@ -204,6 +206,8 @@ export class SelectScene extends Phaser.Scene {
     const isRook = fighter.id === 'rook';
     const isMyst = fighter.id === 'myst';
     this.selectionPreview.update({
+      fighterId: fighter.id,
+      fighterConfig: fighter,
       name: fighter.name,
       color: hex(fighter.color),
       accent: hex(fighter.accent),
@@ -268,13 +272,17 @@ export class SelectScene extends Phaser.Scene {
       const torso = this.add.rectangle(0, 4, isRook ? 68 : isVolt ? 48 : isMyst ? 46 : 54, 42, fighter.color, 1);
       const head = this.add.circle(0, isRook ? -37 : -39, isRook ? 25 : isMyst ? 21 : 23, isRook ? 0x374151 : (fighter.skin ?? 0xc98f68));
       const hair = this.add.ellipse(0, isVolt ? -56 : isMyst ? -48 : -52, isVolt ? 52 : isMyst ? 38 : 48, isVolt ? 26 : isMyst ? 32 : 22, fighter.hair ?? 0x20232c);
-      const name = this.add.text(0, 54, fighter.name, { fontSize: '16px', fontStyle: 'bold', color: COLORS.white, letterSpacing: 1 }).setOrigin(0.5);
+      const styleTag = (fighter.style || 'BALANCED').toUpperCase();
+      const styleColor = isRook ? '#ff5252' : isVolt ? '#38bdf8' : isMyst ? '#c084fc' : '#f2c46b';
+      const badge = this.add.text(0, 38, styleTag, { fontSize: '7px', fontStyle: 'bold', color: styleColor, backgroundColor: '#131926', padding: { x: 5, y: 2 } }).setOrigin(0.5);
+      const name = this.add.text(0, 56, fighter.name, { fontSize: '15px', fontStyle: 'bold', color: COLORS.white, letterSpacing: 1 }).setOrigin(0.5);
       const role = this.add.text(0, 74, fighter.title, { fontSize: '8px', color: COLORS.gold, letterSpacing: 0.6 }).setOrigin(0.5);
       const locked = !isFighterUnlocked(fighter.id);
       const lockLabel = this.add.text(0, -82, locked ? 'LOCKED' : '', { fontSize: '10px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#713c35', padding: { x: 7, y: 4 } }).setOrigin(0.5);
       const selected = this.add.rectangle(0, 0, 150, 190).setStrokeStyle(3, COLORS.gold).setVisible(false);
-      card.add([bg, portrait, glow, shoulders, torso, head, hair, name, role, lockLabel, selected]);
+      card.add([bg, portrait, glow, shoulders, torso, head, hair, badge, name, role, lockLabel, selected]);
       card.setData('locked', locked);
+      card.setData('lockLabel', lockLabel);
       card.setSize(150, 190).setInteractive(new Phaser.Geom.Rectangle(-75, -95, 150, 190), Phaser.Geom.Rectangle.Contains);
       card.on('pointerdown', () => locked ? this.unlockFighter(index) : this.select(index));
       card.setData('selectedBorder', selected);
@@ -290,7 +298,8 @@ export class SelectScene extends Phaser.Scene {
     if (result.ok) {
       const card = this.cardObjects[index];
       card.setData('locked', false);
-      card.getAt(9)?.setText('');
+      card.getData('lockLabel')?.setText('');
+      card.getAt(9)?.setText?.('');
       this.subtitle.setText(`LEVEL ${this.progression.level}  ·  ${this.progression.coins} COINS  ·  ${fighter.name} UNLOCKED`);
       this.select(index);
     } else this.subtitle.setText(`${fighter.name}: ${result.reason}  ·  ${this.progression.coins} COINS`);
@@ -313,6 +322,7 @@ export class SelectScene extends Phaser.Scene {
 
   select(index) {
     if (!isFighterUnlocked(roster[index].id)) return;
+    audioManager.playSelect();
     this.selectedIndex = index;
     const fighter = roster[index];
     this.cardObjects.forEach((card, i) => card.getData('selectedBorder').setVisible(i === index));
@@ -328,17 +338,17 @@ export class SelectScene extends Phaser.Scene {
     const compact = width < 760;
     const narrow = width < 520;
     const desktopSplit = width >= 900;
-    const showSidePreviews = width >= 1500;
+    const showSidePreviews = width >= 1500 || width >= 980;
     if (this.selectionPreviewHost) this.selectionPreviewHost.hidden = !showSidePreviews;
     if (this.stagePreviewHost) this.stagePreviewHost.hidden = !showSidePreviews;
-    this.title.setPosition(width / 2, compact ? 34 : 44).setFontSize(compact ? '21px' : '31px');
-    this.subtitle.setPosition(width / 2, compact ? 60 : 76).setFontSize(compact ? '9px' : '12px');
+    this.title.setPosition(width / 2, compact ? 26 : 34).setFontSize(compact ? '21px' : '30px');
+    this.subtitle.setPosition(width / 2, compact ? 48 : 58).setFontSize(compact ? '9px' : '11px');
     const columns = 4;
     const rows = Math.ceil(roster.length / columns);
     const gap = compact ? 5 : 12;
     const toolbarHeight = this.localVersus ? 236 : 200;
     const toolbarTop = height - toolbarHeight;
-    const startY = compact ? 82 : 112;
+    const startY = compact ? 70 : 88;
     const cardAreaBottom = toolbarTop - (desktopSplit ? 18 : 104);
     const cardH = Math.max(56, Math.min(compact ? 150 : 190, (cardAreaBottom - startY - gap) / rows));
     const cardW = Math.max(55, Math.min(compact ? 118 : 150, (width - (desktopSplit ? 48 : 28) - (columns - 1) * gap) / columns));

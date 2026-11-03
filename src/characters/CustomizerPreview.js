@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { CharacterModelBuilder } from '../three/CharacterModelBuilder.js';
+import { getFighter } from './roster.js';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -70,7 +72,7 @@ export class CustomizerPreview {
     };
     const m = this.materials;
     const torso = this.groups.torso = new THREE.Group(); torso.position.y = 1.35; this.root.add(torso);
-    const head = this.groups.head = new THREE.Group(); head.position.y = 2.22; torso.add(head);
+    const head = this.groups.head = new THREE.Group(); head.position.y = 0.62; torso.add(head);
     const armL = this.groups.armL = new THREE.Group(); armL.position.set(-0.43, 0.16, 0); torso.add(armL);
     const armR = this.groups.armR = new THREE.Group(); armR.position.set(0.43, 0.16, 0); torso.add(armR);
     const legL = this.groups.legL = new THREE.Group(); legL.position.set(-0.2, 0.86, 0); this.root.add(legL);
@@ -166,6 +168,44 @@ export class CustomizerPreview {
 
   update(v) {
     if (this.disposed) return;
+
+    const rosterId = v.fighterId || (['atlas', 'volt', 'rook', 'myst'].includes(v.id) ? v.id : ['atlas', 'volt', 'rook', 'myst'].includes(v.name?.toLowerCase()) ? v.name.toLowerCase() : null);
+    if (rosterId) {
+      if (!this.characterModel || this.currentFighterId !== rosterId) {
+        if (this.characterModel) {
+          this.root.remove(this.characterModel.root);
+          this.characterModel = null;
+        }
+        const cfg = v.fighterConfig || getFighter(rosterId) || { id: rosterId, name: v.name };
+        this.currentFighterId = rosterId;
+        this.currentFighterConfig = cfg;
+        this.characterModel = CharacterModelBuilder.build(cfg);
+        this.root.add(this.characterModel.root);
+      }
+      for (const key of Object.keys(this.groups)) {
+        if (this.groups[key]) this.groups[key].visible = false;
+      }
+      for (const name of Object.keys(this.parts)) {
+        for (const p of this.parts[name]) p.visible = false;
+      }
+      this.root.scale.set(1, 1, 1);
+      this.frameModel();
+      return;
+    }
+
+    if (this.characterModel) {
+      this.root.remove(this.characterModel.root);
+      this.characterModel = null;
+      this.currentFighterId = null;
+      this.currentFighterConfig = null;
+      for (const key of Object.keys(this.groups)) {
+        if (this.groups[key]) this.groups[key].visible = true;
+      }
+      for (const name of Object.keys(this.parts)) {
+        for (const p of this.parts[name]) p.visible = true;
+      }
+    }
+
     const m = this.materials;
     m.cloth.color.set(v.color); m.accent.color.set(v.accent); m.skin.color.set(v.skin); m.hair.color.set(v.hair); m.pants.color.set(v.bottomColor || '#202a3b'); m.pupil.color.set(v.eyeColor || '#171b24');
     const build = { slim: 0.9, athletic: 1, bulky: 1.14 }[v.build] || 1;
@@ -241,14 +281,36 @@ export class CustomizerPreview {
   animate() {
     if (this.disposed) return;
     this.frame = requestAnimationFrame(this.animate);
-    const t = performance.now() * 0.0018;
-    this.groups.torso.rotation.z = Math.sin(t) * 0.012;
-    this.groups.armL.rotation.x = Math.sin(t * 1.2) * 0.025;
-    this.groups.armR.rotation.x = -Math.sin(t * 1.2) * 0.025;
+    const now = performance.now();
+    const t = now * 0.0018;
+    const dt = Math.min(0.1, (now - (this.lastTime || now)) * 0.001);
+    this.lastTime = now;
+
+    if (this.characterModel && this.currentFighterConfig) {
+      const dummy = {
+        id: this.currentFighterConfig.id,
+        character: this.currentFighterConfig,
+        state: 'idle',
+        facing: 1,
+        facingAngle: 0.18 + Math.sin(now * 0.001 * 0.45) * 0.14,
+        x: 0,
+        y: 0,
+        z: 0,
+        vx: 0,
+        vz: 0,
+        actionTime: 0
+      };
+      CharacterModelBuilder.animateFighter(this.characterModel, dummy, now * 0.001, dt);
+    } else if (this.groups?.torso) {
+      this.groups.torso.rotation.z = Math.sin(t) * 0.012;
+      this.groups.armL.rotation.x = Math.sin(t * 1.2) * 0.025;
+      this.groups.armR.rotation.x = -Math.sin(t * 1.2) * 0.025;
+    }
     this.renderer.render(this.scene, this.camera);
   }
   dispose() {
     this.disposed = true; cancelAnimationFrame(this.frame); this.observer?.disconnect();
+    this.characterModel = null;
     this.scene.traverse(o => { if (o.isMesh) { o.geometry.dispose(); if (Array.isArray(o.material)) o.material.forEach(m => m.dispose()); else o.material.dispose(); } });
     this.renderer.dispose(); this.renderer.domElement.remove();
   }

@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { hasCustomFighter, loadSlots } from '../characters/CustomFighter.js';
+import { hasCustomFighter, loadSlots, getActiveCustomSlot } from '../characters/CustomFighter.js';
 import { progressionSnapshot } from '../progression/Progression.js';
 import { audioManager } from '../audio/AudioManager.js';
+import { MenuShowcase } from '../ui/MenuShowcase.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -21,25 +22,54 @@ export class MainMenuScene extends Phaser.Scene {
     document.getElementById('boot-screen')?.classList.add('is-hidden');
     this.scale.on('resize', this.resizeMenu, this);
     this.resizeMenu({ width: this.scale.width, height: this.scale.height });
-    this.events.once('shutdown', () => { this.scale.off('resize', this.resizeMenu, this); });
+    this.events.once('shutdown', () => {
+      this.scale.off('resize', this.resizeMenu, this);
+      this.showcase?.dispose();
+      this.showcase = null;
+    });
   }
   mountMenu() {
     const shell = $('menu-shell'); if (!shell) return;
     shell.hidden = false;
+    audioManager.startBGM('menu');
+    const canvasContainer = $('menu-3d-canvas');
+    if (canvasContainer && !this.showcase) {
+      try {
+        this.showcase = new MenuShowcase(canvasContainer);
+      } catch {}
+    }
+    this.updateQuickDossier();
     const show = (screen) => { shell.querySelectorAll('[data-menu-screen]').forEach(el => el.hidden = el.dataset.menuScreen !== screen); };
     const setStatus = (text) => { const el = $('menu-status'); if (el) el.textContent = text; };
-    const launchSelect = (mode = 'arcade') => { localStorage.setItem('fighter.lastMode', mode); shell.hidden = true; this.scene.start('SelectScene', { mode }); };
-    shell.querySelectorAll('[data-go]').forEach(btn => btn.onclick = () => {
-      audioManager.playClick();
-      const action = btn.dataset.go;
-      if (action === 'arcade' || action === 'local' || action === 'training') launchSelect(action);
-      else if (action === 'online') { show('home'); setStatus('Open ONLINE ROOM from fighter selection to create or join a room.'); launchSelect('online'); }
-      else if (action === 'creator') { shell.hidden = true; this.scene.start('SelectScene', { openCreator: true }); }
-      else if (action === 'settings') { this.loadSettings(); show('settings'); }
-      else if (action === 'profile') { this.loadProfile(); show('profile'); }
-      else if (action === 'home') { show('home'); setStatus(''); }
+    const launchSelect = (mode = 'arcade') => {
+      this.showcase?.dispose();
+      this.showcase = null;
+      localStorage.setItem('fighter.lastMode', mode);
+      shell.hidden = true;
+      this.scene.start('SelectScene', { mode });
+    };
+    shell.querySelectorAll('[data-go]').forEach(btn => {
+      btn.onmouseenter = () => audioManager.playHover();
+      btn.onclick = () => {
+        audioManager.playConfirm();
+        const action = btn.dataset.go;
+        if (action === 'arcade' || action === 'local' || action === 'training') launchSelect(action);
+        else if (action === 'online') { show('home'); setStatus('Open ONLINE ROOM from fighter selection to create or join a room.'); launchSelect('online'); }
+        else if (action === 'creator') {
+          this.showcase?.dispose();
+          this.showcase = null;
+          shell.hidden = true;
+          this.scene.start('SelectScene', { openCreator: true });
+        }
+        else if (action === 'settings') { this.loadSettings(); show('settings'); }
+        else if (action === 'profile') { this.loadProfile(); show('profile'); }
+        else if (action === 'home') { show('home'); setStatus(''); }
+      };
     });
-    shell.querySelectorAll('[data-back]').forEach(btn => btn.onclick = () => { audioManager.playClick(); show(btn.dataset.back || 'home'); });
+    shell.querySelectorAll('[data-back]').forEach(btn => {
+      btn.onmouseenter = () => audioManager.playHover();
+      btn.onclick = () => { audioManager.playCancel(); show(btn.dataset.back || 'home'); };
+    });
     for (const [id, key] of [['setting-master','fighter.settings.master'],['setting-music','fighter.settings.music'],['setting-effects','fighter.settings.effects']]) {
       const el = $(id);
       if (el) el.oninput = e => {
@@ -47,14 +77,29 @@ export class MainMenuScene extends Phaser.Scene {
         audioManager.syncVolumes();
         const out = el.parentElement.querySelector('output');
         if (out) out.textContent = `${e.target.value}%`;
+        if (id === 'setting-effects') audioManager.playSelect();
       };
     }
     const shake = $('setting-shake'); if (shake) shake.onchange = e => localStorage.setItem('fighter.settings.shake', e.target.checked ? '1' : '0');
     const quality = $('setting-quality'); if (quality) quality.onchange = e => localStorage.setItem('fighter.settings.quality', e.target.value);
     const fullscreen = $('setting-fullscreen'); if (fullscreen) fullscreen.onchange = () => this.toggleFullscreen(fullscreen.checked);
     $('profile-name') && ($('profile-name').onchange = e => localStorage.setItem('fighter.profile.name', e.target.value.trim().slice(0,18) || 'Player'));
-    $('profile-save') && ($('profile-save').onclick = () => { audioManager.playClick(); localStorage.setItem('fighter.profile.name', $('profile-name').value.trim().slice(0,18) || 'Player'); setStatus('Profile saved on this device.'); });
+    $('profile-save') && ($('profile-save').onclick = () => { audioManager.playClick(); localStorage.setItem('fighter.profile.name', $('profile-name').value.trim().slice(0,18) || 'Player'); setStatus('Profile saved on this device.'); this.updateQuickDossier(); });
     this.loadSettings(); this.loadProfile(); show('home');
+  }
+  updateQuickDossier() {
+    const p = progressionSnapshot();
+    const lvlEl = $('menu-dossier-level');
+    const coinsEl = $('menu-dossier-coins');
+    const fighterEl = $('menu-dossier-fighter');
+    if (lvlEl) lvlEl.textContent = `LVL ${p.level}`;
+    if (coinsEl) coinsEl.textContent = `🪙 ${p.coins}`;
+    if (fighterEl) {
+      const useCustom = localStorage.getItem('fighter.custom.use.v1') === '1';
+      const slot = getActiveCustomSlot();
+      const custom = useCustom ? loadSlots()[slot] : null;
+      fighterEl.textContent = custom ? custom.name.toUpperCase() : (localStorage.getItem('fighter.lastSelected') || 'ATLAS').toUpperCase();
+    }
   }
   loadSettings() {
     for (const [id, key, fallback] of [['setting-master','fighter.settings.master','80'],['setting-music','fighter.settings.music','65'],['setting-effects','fighter.settings.effects','85']]) { const el = $(id); if (el) el.value = localStorage.getItem(key) ?? fallback; }
@@ -86,7 +131,11 @@ export class MainMenuScene extends Phaser.Scene {
     const history = $('profile-history');
     if (history) {
       let items = []; try { items = JSON.parse(localStorage.getItem('fighter.profile.history.v1') || '[]'); } catch { items = []; }
-      history.innerHTML = items.length ? items.slice(0, 5).map(item => `<div class="history-row"><span><b>${this.escape(item.result)}</b> · ${this.escape(item.player)} vs ${this.escape(item.opponent)}</span><small>${this.escape(item.score)} · ${this.escape(item.mode)} · ${this.escape(item.date)}</small></div>`).join('') : 'No matches played yet.';
+      history.innerHTML = items.length ? items.slice(0, 5).map(item => {
+        const isWin = item.result === 'WIN';
+        const badgeClass = isWin ? 'history-win' : 'history-loss';
+        return `<div class="history-row ${badgeClass}"><span><b class="${badgeClass}-badge">${this.escape(item.result)}</b> · ${this.escape(item.player)} vs ${this.escape(item.opponent)}</span><small>${this.escape(item.score)} · ${this.escape(item.mode)} · ${this.escape(item.date)}</small></div>`;
+      }).join('') : 'No matches played yet.';
     }
   }
   escape(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }
