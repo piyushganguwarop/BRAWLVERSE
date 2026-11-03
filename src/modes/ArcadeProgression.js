@@ -47,6 +47,19 @@ export class ArcadeProgression {
     return true;
   }
 
+  retry() {
+    this.index = 0;
+    this.wins = 0;
+    this.losses = 0;
+    this.status = 'active';
+    return this.snapshot();
+  }
+
+  retryFight() {
+    this.status = 'active';
+    return this.snapshot();
+  }
+
   snapshot() {
     return { index: this.index, total: this.opponents.length, wins: this.wins, losses: this.losses, status: this.status, current: this.current() };
   }

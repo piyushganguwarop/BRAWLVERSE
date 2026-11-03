@@ -2,8 +2,8 @@
 
 **Master Blueprint Reference:** [MASTER_PRODUCTION_BLUEPRINT.md](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/MASTER_PRODUCTION_BLUEPRINT.md)  
 **Active Working Branch:** `v2-reconstruction`  
-**Current Phase:** Phase 4 (Combat Completion & Balance)  
-**Overall Status:** COMPLETED (Phase 4 Combat Polish & Balance Locked)
+**Current Phase:** Phase 5 (Offline Game Modes)  
+**Overall Status:** COMPLETED (Phase 5 Offline Game Modes Verified & Production Ready)
 
 ---
 
@@ -95,3 +95,36 @@
 - [x] **Test & Build Verification:** 157/157 unit tests passing (`test/phase4-combat-balance.test.js`), 15/15 browser CDP tests passing, and clean Vite production build.
 
 *Exit Criteria: COMPLETE. Robust 3D combat loop, knockdowns, get-up recovery, CPU 3D positioning, and move tuning verified.*
+
+---
+
+### Phase 5: Offline Game Modes (Arcade, Training, Local Versus)
+- [x] **Arcade Mode End-to-End Ladder:**
+  - Automated ladder builder generating sequential opponents without player duplication.
+  - Multi-round match progression, difficulty scaling (Easy -> Normal -> Hard), and final boss encounters.
+  - Round results screen with "NEXT OPPONENT →" button (`#arcade-next-fight`) advancing to the next fight.
+  - Defeat recovery: player defeat recorded with rematch continue mechanic (`arcadeRun.retryFight()`) to retry the current bout or `arcadeRun.retry()` on full ladder restart.
+  - Match XP and coin reward calculation on clear.
+- [x] **Training Lab Mode End-to-End:**
+  - Independent training setup without timer depletion or premature round termination.
+  - Dummy behaviors: `stationary` (neutral), `guard` (always blocking), `attack` (CPUController AI counter-pressure).
+  - Infinite toggles: Infinite player health, Infinite dummy health, Infinite special energy.
+  - Full 3D position reset (<kbd>T</kbd>, <kbd>R</kbd>, and on-screen button): restores positions to $(-2.5, 0, 0)$ and $(2.5, 0, 0)$, zeroes all planar and vertical velocities ($v_x, v_y, v_z$), eliminates residual knockback, and resets action cooldowns.
+  - Real-time Training Lab HUD with damage telemetry: Total Damage, Hits, Max Combo, and Last Hit.
+- [x] **Local Versus Mode (Two Players, One Screen):**
+  - Independent dual fighter selection on character select screen (`createPlayerTwoSelector`).
+  - Strict input isolation between Player 1 (WASD/J/K/I/L/Shift/Space/C/E/Q) and Player 2 (Arrows/Numpad 8/1/2/6/5/0/3/4).
+  - Mobile touch support: dedicated `#p2-touch-controls` panel with directional cluster and full 6-action attack pad including heavy strike.
+  - Unambiguous match results reporting: Displays "PLAYER 1 WINS" or "PLAYER 2 WINS" alongside the winning character's name and match score.
+  - One-click Rematch button resetting round state between the chosen fighters.
+- [x] **Pause Menu & Global Hotkeys:**
+  - Keyboard pause toggle wired to <kbd>Escape</kbd> and <kbd>KeyP</kbd>.
+  - Match restart wired to <kbd>KeyR</kbd> (and training reset via <kbd>KeyT</kbd> / <kbd>KeyR</kbd>).
+  - Clean lifecycle disposal: pause modals, training HUDs, P2 touch controls, and event listeners are safely torn down on scene transitions.
+- [x] **Testing & Verification:**
+  - 161/161 unit tests passing (`test/phase5-offline-modes.test.js`).
+  - 4/4 in-browser Phase 5 gameplay verifications passing in Microsoft Edge via CDP (`scripts/verify-phase5-offline-modes.js`).
+  - 7/7 in-browser Phase 4 gameplay verifications passing (`scripts/verify-phase4-gameplay.js`).
+  - 15/15 pipeline browser validations passing (`scripts/validate-browser.js`).
+
+*Exit Criteria: COMPLETE. All three offline modes verified end-to-end with zero broken buttons, seamless rematches, and complete input isolation.*

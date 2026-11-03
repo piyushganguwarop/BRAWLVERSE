@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-11-03T13:36:46.072Z",
+  "allPassed": true,
+  "results": [
+    {
+      "step": 1,
+      "name": "Main Menu Mode Navigation Hub",
+      "passed": true,
+      "details": "MainMenuScene active=true; arcadeBtn=true; localBtn=true; trainBtn=true"
+    },
+    {
+      "step": 2,
+      "name": "Arcade Mode End-to-End Progression & Defeat Retry",
+      "passed": true,
+      "details": "Arcade init: mode=true, opp=volt; Next fight btn=true; Ladder adv=true; Defeat status=true; Retry status=true"
+    },
+    {
+      "step": 3,
+      "name": "Training Lab: Behaviors, 3D Reset, Pause Toggle & Scene Cleanup",
+      "passed": true,
+      "details": "Training mode=true; Lab panel=true; Dummy switch (guard=true, attack=true); 3D Reset (P1=true, Dummy=true); Pause ESC=true->true; Menu exit cleanup=true"
+    },
+    {
+      "step": 4,
+      "name": "Local Versus Mode: Dual Selection, Unambiguous Victor Reporting & Rematch",
+      "passed": true,
+      "details": "Local mode=true; P1=atlas vs P2=volt; P1 Victory=\"PLAYER 1 WINS\"; P2 Victory=\"PLAYER 2 WINS\"; Rematch reset=true; Clean Menu exit=true"
+    }
+  ]
+}

@@ -11,7 +11,11 @@ const COLORS = { bg: 0x10131d, panel: 0x1b2030, muted: '#9ca8bd', gold: '#f2c46b
 export class SelectScene extends Phaser.Scene {
   constructor() { super('SelectScene'); }
 
-  init(data = {}) { this.mode = data.mode || 'arcade'; this.openCreatorOnStart = !!data.openCreator; }
+  init(data = {}) {
+    this.mode = data.mode === 'versus' ? 'local' : (data.mode || 'arcade');
+    this.localVersus = this.mode === 'local';
+    this.openCreatorOnStart = !!data.openCreator;
+  }
 
   create() {
     const touchControls = document.getElementById('touch-controls');
@@ -41,10 +45,10 @@ export class SelectScene extends Phaser.Scene {
     this.stageNext = this.add.text(0, 0, '›', { fontSize: '27px', color: '#ffffff', backgroundColor: '#252c40', padding: { x: 12, y: 3 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     this.stagePrev.on('pointerdown', () => this.changeStage(-1));
     this.stageNext.on('pointerdown', () => this.changeStage(1));
-    this.startButton = this.add.text(0, 0, 'START FIGHT  →', { fontSize: '17px', fontStyle: 'bold', color: '#141722', backgroundColor: '#f2c46b', padding: { x: 25, y: 15 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.startButton = this.add.text(0, 0, this.mode === 'training' ? 'ENTER LAB  →' : 'START FIGHT  →', { fontSize: '17px', fontStyle: 'bold', color: '#141722', backgroundColor: '#f2c46b', padding: { x: 25, y: 15 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     this.startButton.on('pointerdown', () => this.startFight());
     this.createDifficultySelector();
-    if (this.mode === 'local') this.createPlayerTwoSelector();
+    if (this.localVersus) this.createPlayerTwoSelector();
     this.hint = this.add.text(0, 0, 'PC: CLICK TO SELECT  •  MOBILE: TAP A FIGHTER', { fontSize: '10px', color: COLORS.muted, letterSpacing: 1 }).setOrigin(0.5);
     this.createCards();
     this.createSelectionPreview();
@@ -308,7 +312,7 @@ export class SelectScene extends Phaser.Scene {
     const columns = 4;
     const rows = Math.ceil(roster.length / columns);
     const gap = compact ? 5 : 12;
-    const toolbarHeight = this.mode === 'local' ? 236 : 200;
+    const toolbarHeight = this.localVersus ? 236 : 200;
     const toolbarTop = height - toolbarHeight;
     const startY = compact ? 82 : 112;
     const cardAreaBottom = toolbarTop - (desktopSplit ? 18 : 104);
@@ -346,7 +350,7 @@ export class SelectScene extends Phaser.Scene {
     if (this.stagePreviewHost) { this.stagePreviewHost.style.left = '2.2%'; this.stagePreviewHost.style.top = `${Math.max(150, Math.round(height * 0.30))}px`; }
     this.stageLabel.setPosition(width / 2, stageY);
     this.stageDesc.setPosition(width / 2, stageY + 18);
-    const isCpuMode = this.mode !== 'local' && this.mode !== 'online';
+    const isCpuMode = !this.localVersus && this.mode !== 'online';
     this.difficultyLabel?.setVisible(isCpuMode);
     this.difficultyButtons?.forEach(button => button.setVisible(isCpuMode));
     if (isCpuMode) {
@@ -360,7 +364,7 @@ export class SelectScene extends Phaser.Scene {
     this.menuBackButton?.setPosition(compact ? 52 : 62, compact ? 28 : 42).setScale(compact ? 0.78 : 1);
     this.creatorButton?.setPosition(compact ? width / 2 : 145, compact ? 75 : 42).setScale(compact ? 0.72 : 1);
     this.hint.setPosition(width / 2, height - 65).setVisible(!compact);
-    if (this.mode === 'local' && this.p2Title) {
+    if (this.localVersus && this.p2Title) {
       const y = height - 85;
       this.p2Title.setPosition(width / 2, y - 21);
       this.p2Prev.setPosition(width / 2 - 115, y);
@@ -377,7 +381,7 @@ export class SelectScene extends Phaser.Scene {
     const savedCustom = useCustom ? loadSlots()[customSlot] : null;
     const player = savedCustom ? toFighter(savedCustom) : selected;
     const rivals = roster.filter((fighter) => fighter.id !== player.id);
-    if (this.mode === 'local' && this.playerTwoIndex === this.selectedIndex) this.changePlayerTwo(1);
+    if (this.localVersus && this.playerTwoIndex === this.selectedIndex) this.changePlayerTwo(1);
     const opponent = this.mode === 'local' ? roster[this.playerTwoIndex] : Phaser.Utils.Array.GetRandom(rivals.length ? rivals : roster);
     const arcadeRun = this.mode === 'arcade' ? new ArcadeProgression({ playerId: player.id, stageId: this.stages[this.stageIndex].id }) : null;
     const firstArcade = arcadeRun?.current();

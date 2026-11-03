@@ -1,0 +1,47 @@
+{
+  "executedAt": "2026-11-03T13:36:55.330Z",
+  "results": [
+    {
+      "step": 1,
+      "name": "Browser Game Launch",
+      "pass": true,
+      "details": "Phaser 3.90 & Three.js runtime successfully booted in Edge Chromium"
+    },
+    {
+      "step": 2,
+      "name": "Knockdown & Get-Up Visual State and Transformations",
+      "pass": true,
+      "details": "State sequence: knockdown (root.rotZ=-1.45) -> get_up (root.rotZ=-0.73) -> idle (recovered=true)"
+    },
+    {
+      "step": 3,
+      "name": "Invulnerability and Anti-OTG Damage Immunity",
+      "pass": true,
+      "details": "0 damage during knockdown (anti-OTG confirmed); 0 damage during get_up; normal hits connect once idle"
+    },
+    {
+      "step": 4,
+      "name": "CPU 3D Movement Across X and Z Depth",
+      "pass": true,
+      "details": "CPU targeted player at (2.0, 1.4): tracksX=true, tracksZ=true, final position=(0.12, 0.12)"
+    },
+    {
+      "step": 5,
+      "name": "CPU Defensive Reactions to Light, Kick, and Heavy Attacks",
+      "pass": true,
+      "details": "CPU raised block against Light=true, Kick=true, Heavy=true"
+    },
+    {
+      "step": 6,
+      "name": "Heavy Key Binding Isolation & Action Verification",
+      "pass": true,
+      "details": "Both KeyL and KeyI activate heavy attack independently; punch (KeyJ), kick (KeyK), block (ShiftLeft) fully intact"
+    },
+    {
+      "step": 7,
+      "name": "Existing Combat, Cancel Windows, and Arena Boundary Clamping",
+      "pass": true,
+      "details": "Punch->Kick->Heavy cancel combo chain executed (comboCount=3); World boundaries properly clamped X & Z"
+    }
+  ]
+}

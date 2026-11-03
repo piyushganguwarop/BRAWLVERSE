@@ -18,7 +18,9 @@ export class FightScene extends Phaser.Scene {
 
   init(data = {}) {
     this.online = !!data.online;
+    this.mode = data.mode === 'versus' ? 'local' : (data.mode || 'arcade');
     this.localVersus = this.mode === 'local';
+    this.training = this.mode === 'training';
     this.slot = data.slot ?? 0;
     this.roomPlayers = data.players ?? [];
     this.localPlayer = this.roomPlayers[this.slot];
@@ -27,10 +29,7 @@ export class FightScene extends Phaser.Scene {
     this.cpuCharacter = getFighter(this.online ? (this.remotePlayer?.fighterId ?? 'volt') : (data.cpuId ?? 'volt'));
     this.arcadeRun = data.arcadeRun ? ArcadeProgression.restore(data.arcadeRun) : null;
     this.stageId = data.stageId ?? "neon";
-    this.mode = data.mode || 'arcade';
-    this.localVersus = this.mode === 'local';
     this.cpuDifficulty = data.difficulty || localStorage.getItem('fighter.cpu.difficulty') || 'normal';
-    this.training = this.mode === 'training';
     this.trainingSettings = { dummy: 'stationary', infinitePlayer: false, infiniteDummy: true, infiniteEnergy: true };
     this.trainingStats = { damage: 0, hits: 0, maxCombo: 0, lastDamage: 0 };
   }
@@ -88,10 +87,18 @@ export class FightScene extends Phaser.Scene {
     if (this.online) this.bindAuthoritativeOnline();
     if (this.training) this.createTrainingPanel();
     this.scale.on('resize', this.layoutHud, this);
+    this.handlePauseToggle = () => {
+      if (this.pauseOpen) this.closePauseMenu();
+      else this.openPauseMenu();
+    };
+    this.input?.keyboard?.on?.('keydown-ESC', this.handlePauseToggle, this);
+    this.input?.keyboard?.on?.('keydown-P', this.handlePauseToggle, this);
     this.events.once('shutdown', () => {
       this.scale.off('resize', this.layoutHud, this);
-      this.input.keyboard.off('keydown-R', this.handleRestartKey, this);
-      this.input.keyboard.off('keydown-T', this.resetTrainingPositions, this);
+      this.input?.keyboard?.off?.('keydown-R', this.handleRestartKey, this);
+      this.input?.keyboard?.off?.('keydown-T', this.resetTrainingPositions, this);
+      this.input?.keyboard?.off?.('keydown-ESC', this.handlePauseToggle, this);
+      this.input?.keyboard?.off?.('keydown-P', this.handlePauseToggle, this);
       this.three?.destroy(); this.comboBanner?.destroy(); this.nextRoundPrompt?.destroy(); this.trainingPanel?.remove(); this.p2TouchPanel?.remove();
       this.remoteUnsubscribe?.();
       this.peerDisconnectUnsubscribe?.(); this.peerReconnectUnsubscribe?.(); this.rematchUnsubscribe?.();
@@ -104,7 +111,7 @@ export class FightScene extends Phaser.Scene {
       const pause=document.getElementById('pause-panel'); if(pause)pause.hidden=true;
       const results=document.getElementById('results-panel'); if(results)results.hidden=true;
     });
-    this.input.keyboard.on('keydown-R', this.handleRestartKey, this);
+    this.input?.keyboard?.on?.('keydown-R', this.handleRestartKey, this);
   }
 
   createHud() {
@@ -135,7 +142,7 @@ export class FightScene extends Phaser.Scene {
       <div class="training-controls"><label>Dummy behavior<select id="training-dummy"><option value="stationary">Stationary</option><option value="guard">Always guard</option><option value="attack">Attack back</option></select></label>
       <label class="training-toggle"><input id="training-player-health" type="checkbox"> Infinite player health</label><label class="training-toggle"><input id="training-dummy-health" type="checkbox" checked> Infinite dummy health</label><label class="training-toggle"><input id="training-energy" type="checkbox" checked> Infinite energy</label>
       <button type="button" id="training-reset">RESET POSITIONS</button><button type="button" id="training-clear">CLEAR STATS</button></div>
-      <div class="training-stats"><div><small>TOTAL DAMAGE</small><b id="training-damage">0</b></div><div><small>HITS</small><b id="training-hits">0</b></div><div><small>MAX COMBO</small><b id="training-combo">0</b></div><div><small>LAST HIT</small><b id="training-last">0</b></div></div><p>Move A/D · Jump W · Punch J · Kick K · Grab G · Block Shift · Special L · Reset T</p>`;
+      <div class="training-stats"><div><small>TOTAL DAMAGE</small><b id="training-damage">0</b></div><div><small>HITS</small><b id="training-hits">0</b></div><div><small>MAX COMBO</small><b id="training-combo">0</b></div><div><small>LAST HIT</small><b id="training-last">0</b></div></div><p>Move A/D · Jump W · Punch J · Kick K · Heavy I · Grab G · Block Shift · Super L · Reset T / R</p>`;
     document.getElementById('game-root')?.appendChild(panel); const $ = id => panel.querySelector(`#${id}`);
     $('training-dummy').onchange = e => { this.trainingSettings.dummy = e.target.value; this.cpu.activeAction = null; this.cpu.actionTime = 0; this.cpu.actionElapsed = 0; this.cpu.state = 'idle'; this.cpu.blocking = false; };
     $('training-player-health').onchange = e => this.trainingSettings.infinitePlayer = e.target.checked;
@@ -144,7 +151,7 @@ export class FightScene extends Phaser.Scene {
     $('training-reset').onclick = () => this.resetTrainingPositions();
     $('training-clear').onclick = () => { this.trainingStats = { damage: 0, hits: 0, maxCombo: 0, lastDamage: 0 }; this.updateTrainingStats(); };
     $('training-collapse').onclick = () => { panel.classList.toggle('collapsed'); $('training-collapse').textContent = panel.classList.contains('collapsed') ? '+' : '−'; };
-    this.trainingPanel = panel; this.input.keyboard.on('keydown-T', this.resetTrainingPositions, this); this.updateTrainingStats();
+    this.trainingPanel = panel; this.input?.keyboard?.on?.('keydown-T', this.resetTrainingPositions, this); this.updateTrainingStats();
   }
 
   updateTrainingStats() {
@@ -155,9 +162,18 @@ export class FightScene extends Phaser.Scene {
 
   resetTrainingPositions() {
     if (!this.training) return;
-    this.player.x = -2.5; this.cpu.x = 2.5;
-    for (const fighter of this.fighters) { fighter.y=0; fighter.vx=0; fighter.vy=0; fighter.health=100; fighter.energy=100; fighter.state='idle'; fighter.activeAction=null; fighter.actionTime=0; fighter.actionElapsed=0; fighter.stun=0; fighter.knockbackVelocity=0; fighter.blocking=false; fighter.invulnerable=0; fighter.cooldowns={punch:0,kick:0,grab:0,special:0}; }
-    this.player.facing=1; this.cpu.facing=-1; this.player.comboCount=0; this.player.comboWindow=0;
+    this.player.x = -2.5; this.player.z = 0;
+    this.cpu.x = 2.5; this.cpu.z = 0;
+    for (const fighter of this.fighters) {
+      fighter.y = 0; fighter.z = 0; fighter.vx = 0; fighter.vy = 0; fighter.vz = 0;
+      fighter.health = 100; fighter.energy = 100; fighter.state = 'idle';
+      fighter.activeAction = null; fighter.actionTime = 0; fighter.actionElapsed = 0;
+      fighter.stun = 0; fighter.knockbackVelocity = 0; fighter.knockbackVelocityZ = 0;
+      fighter.blocking = false; fighter.invulnerable = 0;
+      fighter.cooldowns = { punch: 0, kick: 0, heavy: 0, grab: 0, special: 0 };
+    }
+    this.player.facing = 1; this.cpu.facing = -1;
+    this.player.comboCount = 0; this.player.comboWindow = 0;
     this.three?.setFighters(this.fighters); this.updateBars();
   }
 
@@ -168,7 +184,7 @@ export class FightScene extends Phaser.Scene {
     this.menuButton.on('pointerdown', () => this.scene.start('MainMenuScene'));
     const panel = document.getElementById('pause-panel');
     const controlsInfo = document.getElementById('pause-info');
-    if (controlsInfo && this.localVersus) controlsInfo.textContent = 'P1: A/D move · W jump · E/Q dash · J punch · K kick · G grab · Shift block · L super. P2: arrows move · Num 8 jump · Num 6/4 dash · Num 1 punch · Num 2 kick · Num 3 grab · Num 0 block · Num 5 super.';
+    if (controlsInfo && this.localVersus) controlsInfo.textContent = 'P1: A/D move · W jump · E/Q dash · J punch · K kick · I heavy · G grab · Shift block · L super. P2: arrows move · Num 8 jump · Num 6/4 dash · Num 1 punch · Num 2 kick · Num 6 heavy · Num 3 grab · Num 0 block · Num 5 super.';
     const bind = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
     bind('pause-resume', () => this.closePauseMenu());
     bind('pause-restart', () => { this.closePauseMenu(); document.querySelector('#results-panel .results-actions #arcade-next-fight')?.remove(); this.matchFlow.reset(); this.playerWins = 0; this.cpuWins = 0; this.roundNumber = 1; this.restartRound(); });
@@ -180,7 +196,26 @@ export class FightScene extends Phaser.Scene {
     bind('results-rematch', () => {
       if (this.online) { onlineRoom.voteRematch(); const button=document.getElementById('results-rematch'); if(button){button.disabled=true;button.textContent='WAITING FOR OPPONENT…';} return; }
       document.querySelector('#results-panel .results-actions #arcade-next-fight')?.remove();
-      document.getElementById('results-panel').hidden = true; this.matchFlow.reset(); this.playerWins = 0; this.cpuWins = 0; this.roundNumber = 1; this.restartRound();
+      document.getElementById('results-panel').hidden = true;
+      if (this.mode === 'arcade' && this.arcadeRun) {
+        if (this.arcadeRun.status === 'defeat') {
+          this.arcadeRun.retryFight();
+        } else if (this.arcadeRun.status === 'complete') {
+          this.arcadeRun.retry();
+          const first = this.arcadeRun.current();
+          this.scene.start('FightScene', {
+            mode: 'arcade',
+            playerId: this.playerCharacter.id,
+            customFighter: this.playerCharacter.id === 'custom' ? this.playerCharacter : null,
+            cpuId: first?.fighterId ?? 'volt',
+            stageId: first?.stageId ?? this.stageId,
+            difficulty: first?.difficulty ?? this.cpuDifficulty,
+            arcadeRun: this.arcadeRun.serialize()
+          });
+          return;
+        }
+      }
+      this.matchFlow.reset(); this.playerWins = 0; this.cpuWins = 0; this.roundNumber = 1; this.restartRound();
     });
     bind('results-select', () => { document.getElementById('results-panel').hidden = true; this.scene.start('SelectScene', { mode: this.mode }); });
     bind('results-menu', () => { document.getElementById('results-panel').hidden = true; this.scene.start('MainMenuScene'); });
@@ -383,7 +418,7 @@ export class FightScene extends Phaser.Scene {
   createPlayerTwoTouchControls() {
     document.getElementById('p2-touch-controls')?.remove();
     const panel=document.createElement('div'); panel.id='p2-touch-controls';
-    panel.innerHTML='<div class="p2-touch-title">PLAYER 2</div><div class="p2-touch-move"><button data-control-p2="left">◀</button><button data-control-p2="right">▶</button><button data-control-p2="up">JUMP</button></div><div class="p2-touch-attacks"><button data-control-p2="punch">PUNCH</button><button data-control-p2="kick">KICK</button><button data-control-p2="grab">GRAB</button><button data-control-p2="block">BLOCK</button><button data-control-p2="special">SUPER</button></div>';
+    panel.innerHTML='<div class="p2-touch-title">PLAYER 2</div><div class="p2-touch-move"><button data-control-p2="left">◀</button><button data-control-p2="right">▶</button><button data-control-p2="up">JUMP</button></div><div class="p2-touch-attacks"><button data-control-p2="punch">PUNCH</button><button data-control-p2="kick">KICK</button><button data-control-p2="heavy">HEAVY</button><button data-control-p2="grab">GRAB</button><button data-control-p2="block">BLOCK</button><button data-control-p2="special">SUPER</button></div>';
     document.getElementById('game-root')?.appendChild(panel);
     panel.querySelectorAll('[data-control-p2]').forEach(button=>{
       const action=button.dataset.controlP2;
@@ -545,8 +580,22 @@ export class FightScene extends Phaser.Scene {
       const title = document.getElementById('results-title');
       const subtitle = document.getElementById('results-subtitle');
       const score = document.getElementById('results-score');
-      if (title) title.textContent = won ? 'VICTORY' : 'DEFEAT';
-      if (subtitle) subtitle.textContent = won ? `${this.playerCharacter.name} rules the arena.` : `${this.cpuCharacter.name} takes the match.`;
+      if (title) {
+        if (this.localVersus) {
+          title.textContent = won ? 'PLAYER 1 WINS' : 'PLAYER 2 WINS';
+        } else {
+          title.textContent = won ? 'VICTORY' : 'DEFEAT';
+        }
+      }
+      if (subtitle) {
+        if (this.localVersus) {
+          subtitle.textContent = won
+            ? `${this.playerCharacter.name} defeated ${this.cpuCharacter.name} in local versus.`
+            : `${this.cpuCharacter.name} defeated ${this.playerCharacter.name} in local versus.`;
+        } else {
+          subtitle.textContent = won ? `${this.playerCharacter.name} rules the arena.` : `${this.cpuCharacter.name} takes the match.`;
+        }
+      }
       if (score) score.textContent = `${this.playerWins}  —  ${this.cpuWins}`;
       const panel = document.getElementById('results-panel'); if (panel) panel.hidden = false;
       const statsKey = 'fighter.profile.stats.v1';
@@ -634,6 +683,10 @@ export class FightScene extends Phaser.Scene {
   }
 
   handleRestartKey() {
+    if (this.training) {
+      this.resetTrainingPositions();
+      return;
+    }
     if (this.roundOver) {
       this.advanceRound();
       return;
