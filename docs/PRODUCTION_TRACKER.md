@@ -208,6 +208,21 @@
 - [x] **Milestone 7.7: Verification & In-Browser CDP Screenshot Audit:**
   - 177/177 automated unit tests passing (`npm test`).
   - Production build succeeds without errors (`npm run build`).
-  - 15/15 in-browser screenshots captured via Edge Chromium CDP in [`docs/audit_screenshots/`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/audit_screenshots/).
+  - 15/15 in-browser screenshots captured via Edge Chromium CDP in [`docs/audit_screenshots/`](file:///c:/Users/piyush/Downloads/PiyuProjects\BRAWLVERSE\docs\audit_screenshots\).
 
-*Exit Criteria: COMPLETE. Phase 7 UI, Progression, Audio and Game Polish verified across all 14 priority areas in automated test suites and live browser runtimes.*
+### BRAWLVERSE UI Redesign & Asset Integration (Approved 12-Screen Specification)
+- [x] **Milestone 1: Main Menu & Mode Select Implementation:**
+  - Audited and inventoried complete `BRAWLVERSE_UI_ASSET_PACK` (`00_REFERENCE`, `01_BRAND`, `02_VECTORS`, `03_DESIGN_SYSTEM`, `04_SCREEN_SPECS`, `05_IMPLEMENTATION`).
+  - Extracted and deployed assets to `public/ui/brand/`, `public/ui/components/`, `public/ui/icons/`.
+  - Upgraded brand name to official **BRAWLVERSE** everywhere in visible UI.
+  - Implemented Screen 01 Main Menu layout from approved concept board:
+    - Top section header bar (`01 MAIN MENU` with electric cyan badge).
+    - Top quick dossier with level pill and SVG coin balance (`coin.svg`, zero emoji).
+    - Left navigation column with official `brawlverse-logo.svg`.
+    - 5 sharp angular action buttons (`PLAY` primary, `FIGHTERS`, `TRAINING`, `COLLECTION`, `SETTINGS`).
+    - Right hero showcase: Live 3D Atlas model with spiky hair, face paint, glowing Titan Gauntlet, reflective cyber pedestal with Electric Cyan accent ring (`0x12DDEB`), studio anime lighting, and floating cyber energy motes.
+  - Implemented Screen 02 Mode Select with 4 distinct mode cards (`ARCADE`, `LOCAL VERSUS`, `TRAINING`, `ONLINE`) with color-coded glowing vector icons.
+  - Resolved all unnecessary scrollbars and verified desktop (1920x1080), compact (1366x768), and mobile landscape (844x390).
+  - Captured verified browser screenshots: `m1_01_main_menu_1920x1080.png`, `m1_02_main_menu_1366x768.png`, `m1_03_main_menu_844x390.png`, `m1_04_mode_select_1920x1080.png`.
+
+*Exit Criteria: Milestone 1 COMPLETE. Verified across 177/177 automated tests, production build, and CDP in-browser screenshots.*

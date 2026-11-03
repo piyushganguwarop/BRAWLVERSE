@@ -1,7 +1,7 @@
-# Brawl Wars - Test & Browser Validation Results Register
+# BRAWLVERSE - Test & Browser Validation Results Register
 
-**Document Version:** 1.7.0  
-**Phase Milestone:** Phase 7: UI, Progression, Audio and Game Polish  
+**Document Version:** 1.8.0  
+**Phase Milestone:** BRAWLVERSE UI Redesign & Asset Integration (Milestone 1: Main Menu & Mode Select)  
 **Date of Run:** 2026-11-03  
 **Platform / OS:** Windows 11  
 **Browser Engine:** Microsoft Edge 156.0.4314.58 (Headless Chromium via CDP)  
@@ -16,6 +16,15 @@
 - **Passed:** 177 (100%)
 - **Failed:** 0
 - **Duration:** ~670ms
+
+---
+
+## 1.1 BRAWLVERSE UI Redesign Milestone 1 Validation
+
+| Screen / Component | Resolutions Tested | Status | Findings / Result |
+| :--- | :--- | :--- | :--- |
+| **Screen 01: Main Menu** | 1920x1080 (Desktop)<br>1366x768 (Compact)<br>844x390 (Mobile Landscape) | **PASS** | BRAWLVERSE vector logo rendered without clipping; 5 sharp action buttons (`PLAY` primary, `FIGHTERS`, `TRAINING`, `COLLECTION`, `SETTINGS`) with SVG mask icons; live 3D Atlas model rendered with signature Titan Gauntlet and floating cyber energy motes on Electric Cyan glowing pedestal; top section tag `01 MAIN MENU` and quick dossier pills (Level & Coins, zero emojis); unnecessary scrollbars removed. |
+| **Screen 02: Mode Select** | 1920x1080 (Desktop) | **PASS** | Triggered upon clicking `PLAY`; displays `02 MODE SELECT` header, `SELECT GAME MODE` heading, and 4 color-coded mode cards (`ARCADE` in Electric Cyan, `LOCAL VERSUS` in Hot Magenta, `TRAINING` in Electric Violet, `ONLINE` in Radiant Gold) with glowing vector SVG icons; `BACK` button returns smoothly to Main Menu. |
 
 ### Suite Breakdown
 

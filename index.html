@@ -4,16 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#10121a" />
-    <meta name="description" content="Brawl Wars is a 3D browser fighting game. Build your fighter, master combos and own the arena." />
-    <meta name="application-name" content="Brawl Wars" />
-    <title>Brawl Wars | Fight. Adapt. Dominate.</title>
+    <meta name="description" content="BRAWLVERSE is a 3D anime browser fighting game. Build your fighter, master combos and own the arena." />
+    <meta name="application-name" content="BRAWLVERSE" />
+    <title>Brawl Wars: BRAWLVERSE | Fight. Adapt. Dominate.</title>
   </head>
   <body>
     <section id="boot-screen" class="boot-screen" role="status" aria-live="polite">
-      <div class="boot-mark">BW</div>
+      <div class="boot-mark"><img src="/ui/icons/shield.svg" alt="" width="28" height="28" /></div>
       <p class="boot-kicker">ENTER THE ARENA</p>
-      <h1>BRAWL <span>WARS</span></h1>
-      <p class="boot-message" id="boot-message">Preparing your fighter...</p>
+      <h1>BRAWL<span>VERSE</span></h1>
+      <p class="boot-message" id="boot-message">Preparing combat systems...</p>
       <div class="boot-track"><span></span></div>
       <small>FIGHT · ADAPT · DOMINATE</small>
     </section>
@@ -43,62 +43,131 @@
     </main>
 
     <section id="menu-shell" class="menu-shell" hidden aria-label="Main game menu">
-      <div class="menu-frame">
-        <section data-menu-screen="home" class="menu-screen">
-          <div class="menu-brand">
-            <span class="brand-mark">BW</span>
-            <span class="brand-text">BRAWL WARS</span>
-            <span class="brand-sub">ANIME 3D BRAWLER</span>
-            <div class="menu-quick-dossier" id="menu-quick-dossier">
-              <span class="dossier-level" id="menu-dossier-level">LVL 1</span>
-              <span class="dossier-coins" id="menu-dossier-coins">🪙 0</span>
-              <span class="dossier-fighter" id="menu-dossier-fighter">ATLAS</span>
+      <div class="menu-frame bv-frame">
+        <!-- 01: MAIN MENU -->
+        <section data-menu-screen="home" class="menu-screen bv-screen bv-screen-main">
+          <!-- Top Section Header & Quick Dossier -->
+          <header class="bv-topbar">
+            <div class="bv-section-tag">
+              <span class="bv-tag-badge">01</span>
+              <span class="bv-tag-title">MAIN MENU</span>
             </div>
-          </div>
-          <div class="menu-home-grid">
-            <div class="menu-copy">
-              <p class="eyebrow">TACTICAL 3D COMBAT · BUILD YOUR LEGEND</p>
-              <h1>ENTER THE<br><em>BRAWLVERSE</em></h1>
-              <p class="menu-lead">Master fluid 3D movement, combo cancels, and signature anime specials. Choose a mode and own the arena.</p>
-              <div class="menu-primary-actions">
-                <button data-go="arcade" class="menu-button primary mode-arcade">
-                  <span class="btn-kanji">アーケード</span>
-                  <span class="btn-title">PLAY ARCADE</span>
-                  <span class="btn-sub">Solo Ladder Run</span>
-                  <b>↗</b>
-                </button>
-                <button data-go="local" class="menu-button mode-local">
-                  <span class="btn-kanji">対戦</span>
-                  <span class="btn-title">LOCAL VERSUS</span>
-                  <span class="btn-sub">2 Players 1 Screen</span>
-                </button>
-                <button data-go="training" class="menu-button mode-training">
-                  <span class="btn-kanji">練習</span>
-                  <span class="btn-title">TRAINING LAB</span>
-                  <span class="btn-sub">Practice Combos</span>
-                </button>
-                <button data-go="online" class="menu-button mode-online">
-                  <span class="btn-kanji">通信</span>
-                  <span class="btn-title">ONLINE FIGHT</span>
-                  <span class="btn-sub">P2P Room Match</span>
-                </button>
+            <div class="bv-top-dossier" id="menu-quick-dossier">
+              <div class="bv-dossier-pill bv-dossier-level" id="menu-dossier-pill-level" data-go="profile" role="button" tabindex="0" title="View Profile">
+                <span class="bv-icon icon-fighters"></span>
+                <span id="menu-dossier-level">LVL 1</span>
               </div>
+              <div class="bv-dossier-pill bv-dossier-coins" id="menu-dossier-pill-coins">
+                <span class="bv-icon icon-coin"></span>
+                <span id="menu-dossier-coins">0</span>
+              </div>
+              <span id="menu-dossier-fighter" hidden>ATLAS</span>
             </div>
-            <div class="menu-hero" id="menu-hero-showcase">
+          </header>
+
+          <div class="bv-main-layout">
+            <!-- Left Navigation Column -->
+            <div class="bv-nav-column">
+              <!-- BRAWLVERSE Logo -->
+              <div class="bv-brand-wrap">
+                <img src="/ui/brand/brawlverse-logo.svg" alt="BRAWLVERSE" class="bv-brand-logo" />
+              </div>
+
+              <!-- Action Stack (5 Sharp Buttons per Approved UI Concept) -->
+              <nav class="bv-action-stack" aria-label="Main Menu Actions">
+                <!-- 1. PLAY (Primary Electric Cyan Button) -->
+                <button data-go="modes" class="bv-btn bv-btn-primary" aria-label="Play Game Modes">
+                  <span class="bv-icon icon-play"></span>
+                  <span class="bv-btn-label">PLAY</span>
+                </button>
+
+                <!-- 2. FIGHTERS (Secondary Dark Button) -->
+                <button data-go="creator" class="bv-btn bv-btn-secondary" aria-label="Fighters Workshop">
+                  <span class="bv-icon icon-fighters"></span>
+                  <span class="bv-btn-label">FIGHTERS</span>
+                </button>
+
+                <!-- 3. TRAINING (Secondary Dark Button) -->
+                <button data-go="training" class="bv-btn bv-btn-secondary" aria-label="Training Lab">
+                  <span class="bv-icon icon-training"></span>
+                  <span class="bv-btn-label">TRAINING</span>
+                </button>
+
+                <!-- 4. COLLECTION (Secondary Dark Button) -->
+                <button data-go="profile" class="bv-btn bv-btn-secondary" aria-label="Collection and Profile">
+                  <span class="bv-icon icon-collection"></span>
+                  <span class="bv-btn-label">COLLECTION</span>
+                </button>
+
+                <!-- 5. SETTINGS (Secondary Dark Button) -->
+                <button data-go="settings" class="bv-btn bv-btn-secondary" aria-label="Settings">
+                  <span class="bv-icon icon-settings"></span>
+                  <span class="bv-btn-label">SETTINGS</span>
+                </button>
+              </nav>
+            </div>
+
+            <!-- Right Hero Showcase: Live 3D Atlas Preview -->
+            <div class="bv-hero-showcase" id="menu-hero-showcase">
+              <div class="bv-hero-glow"></div>
               <div class="hero-3d-stage" id="menu-3d-canvas"></div>
-              <div class="hero-caption">
-                <strong id="menu-hero-name">ATLAS · THE HEAVYWEIGHT</strong>
-                <small id="menu-hero-style">BALANCED · TITAN ENERGY GAUNTLET</small>
+              <div class="bv-hero-badge" id="menu-hero-badge">
+                <strong id="menu-hero-name">ATLAS</strong>
+                <span class="bv-badge-style" id="menu-hero-style">THE HEAVYWEIGHT</span>
               </div>
             </div>
           </div>
-          <footer class="menu-footer">
-            <button data-go="creator" class="footer-btn">✦ FIGHTER WORKSHOP</button>
-            <button data-go="profile" class="footer-btn">DOSSIER & HISTORY</button>
-            <button data-go="settings" class="footer-btn">SETTINGS</button>
-            <span id="menu-status" role="status">Ready for combat.</span>
-            <small>BRAWL WARS V2 · PRODUCTION</small>
-          </footer>
+          <span id="menu-status" role="status" hidden>Ready for combat.</span>
+        </section>
+
+        <!-- 02: MODE SELECT SCREEN -->
+        <section data-menu-screen="modes" class="menu-screen bv-screen bv-screen-modes" hidden>
+          <header class="bv-topbar">
+            <div class="bv-section-tag">
+              <span class="bv-tag-badge">02</span>
+              <span class="bv-tag-title">MODE SELECT</span>
+            </div>
+            <button class="bv-back-btn" data-back="home">
+              <span class="bv-icon icon-arrow"></span> BACK
+            </button>
+          </header>
+          <div class="bv-modes-container">
+            <h2 class="bv-screen-title">SELECT GAME MODE</h2>
+            <div class="bv-modes-grid">
+              <!-- Arcade -->
+              <button class="bv-mode-card bv-mode-arcade" data-go="arcade">
+                <div class="bv-mode-icon"><span class="bv-icon icon-trophy lg"></span></div>
+                <div class="bv-mode-info">
+                  <h3>ARCADE</h3>
+                  <p>FIGHT A LADDER OF RIVALS</p>
+                </div>
+              </button>
+              <!-- Local Versus -->
+              <button class="bv-mode-card bv-mode-local" data-go="local">
+                <div class="bv-mode-icon"><span class="bv-icon icon-fighters lg"></span></div>
+                <div class="bv-mode-info">
+                  <h3>LOCAL VERSUS</h3>
+                  <p>2 PLAYERS SAME SCREEN</p>
+                </div>
+              </button>
+              <!-- Training -->
+              <button class="bv-mode-card bv-mode-training" data-go="training">
+                <div class="bv-mode-icon"><span class="bv-icon icon-training lg"></span></div>
+                <div class="bv-mode-info">
+                  <h3>TRAINING</h3>
+                  <p>PRACTICE, COMBOS & MECHANICS</p>
+                </div>
+              </button>
+              <!-- Online -->
+              <button class="bv-mode-card bv-mode-online" data-go="online">
+                <div class="bv-mode-icon"><span class="bv-icon icon-online lg"></span></div>
+                <div class="bv-mode-info">
+                  <h3>ONLINE</h3>
+                  <p>PVP ROOMS (BETA)</p>
+                </div>
+              </button>
+            </div>
+          </div>
         </section>
         <section data-menu-screen="settings" class="menu-screen sub-screen" hidden>
           <button class="menu-back" data-back="home">← BACK</button>

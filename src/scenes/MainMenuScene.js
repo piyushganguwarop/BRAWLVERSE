@@ -12,12 +12,12 @@ export class MainMenuScene extends Phaser.Scene {
     const controls = $('touch-controls'); if (controls) controls.style.display = 'none';
     $('creator-panel')?.setAttribute('hidden', ''); $('online-panel')?.setAttribute('hidden', '');
     $('pause-panel')?.setAttribute('hidden', ''); $('results-panel')?.setAttribute('hidden', '');
-    this.menuBackground = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x0b0e17).setOrigin(0).setScrollFactor(0);
-    this.menuGlow = this.add.rectangle(this.scale.width * .72, this.scale.height * .52, this.scale.width * .56, this.scale.height * 1.1, 0x1b2941, .45).setOrigin(.5);
-    this.brand = this.add.text(54, 62, 'BRAWL WARS', { fontFamily: 'Arial Black, Arial', fontSize: '13px', color: '#f2c46b', letterSpacing: 4 }).setOrigin(0, .5);
-    this.hero = this.add.text(54, 190, 'BUILD YOUR\nFIGHTER.\nOWN THE ARENA.', { fontFamily: 'Arial Black, Arial', fontSize: this.scale.width < 700 ? '36px' : '62px', color: '#f5f7fb', fontStyle: 'bold', lineSpacing: -2 }).setOrigin(0, 0);
-    this.tagline = this.add.text(58, 405, 'A 3D fighting game built around your own custom champion.', { fontSize: '14px', color: '#aebbd0', wordWrap: { width: Math.min(440, this.scale.width - 100) } });
-    this.footer = this.add.text(this.scale.width - 60, this.scale.height - 42, 'BRAWL WARS  ·  EARLY ACCESS', { fontSize: '10px', color: '#78869f', letterSpacing: 1 }).setOrigin(1, .5);
+    this.menuBackground = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x070d17).setOrigin(0).setScrollFactor(0);
+    this.menuGlow = this.add.rectangle(this.scale.width * .72, this.scale.height * .52, this.scale.width * .56, this.scale.height * 1.1, 0x101b2c, .45).setOrigin(.5);
+    this.brand = this.add.text(54, 62, 'BRAWLVERSE', { fontFamily: 'Orbitron, Arial', fontSize: '13px', color: '#12ddeb', letterSpacing: 4 }).setOrigin(0, .5);
+    this.hero = this.add.text(54, 190, 'ENTER THE\nBRAWLVERSE', { fontFamily: 'Orbitron, Arial', fontSize: this.scale.width < 700 ? '36px' : '62px', color: '#f5f7fb', fontStyle: 'bold', lineSpacing: -2 }).setOrigin(0, 0);
+    this.tagline = this.add.text(58, 405, 'Tactical 3D combat. Master fluid movement and signature anime specials.', { fontSize: '14px', color: '#91a2b9', wordWrap: { width: Math.min(440, this.scale.width - 100) } });
+    this.footer = this.add.text(this.scale.width - 60, this.scale.height - 42, 'BRAWLVERSE  ·  PHASE 7', { fontSize: '10px', color: '#91a2b9', letterSpacing: 1 }).setOrigin(1, .5);
     this.mountMenu();
     document.getElementById('boot-screen')?.classList.add('is-hidden');
     this.scale.on('resize', this.resizeMenu, this);
@@ -53,7 +53,8 @@ export class MainMenuScene extends Phaser.Scene {
       btn.onclick = () => {
         audioManager.playConfirm();
         const action = btn.dataset.go;
-        if (action === 'arcade' || action === 'local' || action === 'training') launchSelect(action);
+        if (action === 'modes') show('modes');
+        else if (action === 'arcade' || action === 'local' || action === 'training') launchSelect(action);
         else if (action === 'online') { show('home'); setStatus('Open ONLINE ROOM from fighter selection to create or join a room.'); launchSelect('online'); }
         else if (action === 'creator') {
           this.showcase?.dispose();
@@ -93,7 +94,7 @@ export class MainMenuScene extends Phaser.Scene {
     const coinsEl = $('menu-dossier-coins');
     const fighterEl = $('menu-dossier-fighter');
     if (lvlEl) lvlEl.textContent = `LVL ${p.level}`;
-    if (coinsEl) coinsEl.textContent = `🪙 ${p.coins}`;
+    if (coinsEl) coinsEl.textContent = Number(p.coins || 0).toLocaleString();
     if (fighterEl) {
       const useCustom = localStorage.getItem('fighter.custom.use.v1') === '1';
       const slot = getActiveCustomSlot();
