@@ -123,6 +123,44 @@ class AudioManager {
     } catch {}
   }
 
+  playHeavy() {
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.sfxGain) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(130, now);
+      osc.frequency.exponentialRampToValueAtTime(22, now + 0.24);
+      gain.gain.setValueAtTime(1.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.24);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } catch {}
+  }
+
+  playDash() {
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.sfxGain) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.12);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.13);
+    } catch {}
+  }
+
   playGrab() {
     try {
       const ctx = this.ensureContext();

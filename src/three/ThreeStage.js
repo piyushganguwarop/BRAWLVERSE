@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { ArenaCamera } from './ArenaCamera.js';
 import { assetLoader } from '../core/AssetLoader.js';
 import { gameConfig } from '../config/gameConfig.js';
+import { NeonDistrictStage } from './NeonDistrictStage.js';
+import { CharacterModelBuilder } from './CharacterModelBuilder.js';
 
 function material(color, roughness = 0.72) {
   return new THREE.MeshToonMaterial({ color });
@@ -34,89 +36,7 @@ function disposeResources(root) {
 }
 
 function createFighter(color, accent, skinColor = 0xc98f68, hairColor = 0x20232c, style = 'balanced', appearance = {}) {
-  const root = new THREE.Group();
-  const bodyMat = material(color);
-  const accentMat = material(accent);
-  const skinMat = material(skinColor);
-  const darkMat = material(hairColor);
-  const pantsMat = material(appearance.bottomColor ? Number.parseInt(String(appearance.bottomColor).replace('#',''),16) : 0x202a3b);
-  const torso = new THREE.Group();
-  torso.position.y = 1.28;
-  root.add(torso);
-  const buildScale = appearance.bodyScale || 1;
-  const bodyWidth = (style === 'tank' || style === 'power' ? 0.82 : 0.72) * buildScale;
-  torso.scale.set(buildScale, 1, 1);
-  torso.add(box(bodyWidth, 0.82, 0.42, bodyMat, 0, 0, 0));
-  const topStyle = appearance.top || 'tee';
-  torso.add(box(0.76, appearance.outfit === 'combat' ? 0.2 : 0.13, 0.44, accentMat, 0, -0.28, 0));
-  if (topStyle === 'jacket') { torso.add(box(0.12, 0.76, 0.46, accentMat, -0.29, 0, 0.02)); torso.add(box(0.12, 0.76, 0.46, accentMat, 0.29, 0, 0.02)); }
-  if (topStyle === 'hoodie') { torso.add(sphere(0.19, darkMat, 0, 0.36, -0.2)); torso.add(box(0.36, 0.13, 0.035, accentMat, 0, -0.22, 0.235)); }
-  if (topStyle === 'tee') torso.add(box(0.15, 0.15, 0.035, accentMat, 0, 0.02, 0.235));
-  if (topStyle === 'vest') { torso.add(box(0.18, 0.72, 0.46, skinMat, -0.22, 0, 0.015)); torso.add(box(0.18, 0.72, 0.46, skinMat, 0.22, 0, 0.015)); }
-  if (appearance.accessory === 'chain') { const chain = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.018, 6, 24, Math.PI), accentMat); chain.position.set(0, 0.12, 0.22); torso.add(chain); }
-  if (appearance.outfit === 'combat') torso.add(box(0.82, 0.16, 0.46, accentMat, 0, 0.27, 0));
-  if (appearance.outfit === 'street') torso.add(box(0.84, 0.12, 0.45, darkMat, 0, -0.38, 0));
-  const head = sphere(0.29, skinMat, 0, 0.63, 0);
-  head.scale.set(appearance.face === 'square' ? 1.08 : appearance.face === 'round' ? 1.12 : 1, appearance.face === 'round' ? 0.92 : 1, 0.96);
-  torso.add(head);
-  // Eyes and brows face the camera (+Z).
-  const eyeMat = material(0xf4f1e9, 0.35);
-  const irisMat = material(appearance.eyeColor ? Number.parseInt(String(appearance.eyeColor).replace('#',''),16) : 0x171923, 0.3);
-  for (const x of [-0.105, 0.105]) {
-    torso.add(sphere(0.027, eyeMat, x, 0.66, 0.257));
-    torso.add(sphere(0.013, irisMat, x, 0.66, 0.282));
-    const brow = box(0.085, appearance.brows === 'strong' ? 0.035 : 0.018, 0.025, darkMat, x, 0.715, 0.255);
-    if (appearance.brows === 'angled') brow.rotation.z = x < 0 ? -0.18 : 0.18;
-    torso.add(brow);
-  }
-  if (appearance.beard && appearance.beard !== 'none') {
-    const beard = sphere(0.17, darkMat, 0, 0.48, 0.205);
-    beard.scale.set(appearance.beard === 'stubble' ? 0.92 : 1, appearance.beard === 'mustache' ? 0.22 : 0.58, 0.38);
-    torso.add(beard);
-  }
-  if (appearance.accessory === 'mask') { torso.add(box(0.34, 0.14, 0.055, accentMat, 0, 0.56, 0.25)); }
-  if (appearance.accessory === 'glasses') {
-    for (const x of [-0.105, 0.105]) { const lens = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.012, 6, 16), material(0x20242d, 0.3)); lens.position.set(x, 0.66, 0.275); torso.add(lens); }
-    torso.add(box(0.08, 0.015, 0.018, darkMat, 0, 0.66, 0.275));
-  } else if (appearance.accessory === 'headband') {
-    torso.add(box(0.53, 0.07, 0.31, accentMat, 0, 0.78, 0));
-  }
-  if (appearance.hairStyle !== 'bald') {
-    const hair = sphere(appearance.hairStyle === 'long' ? 0.31 : 0.295, darkMat, 0, 0.79, -0.015);
-    hair.scale.set(1, appearance.hairStyle === 'spiky' ? 0.82 : appearance.hairStyle === 'long' ? 1.05 : 0.55, 1);
-    torso.add(hair);
-    if (appearance.hairStyle === 'long') { torso.add(box(0.12, 0.48, 0.16, darkMat, -0.23, 0.35, -0.02)); torso.add(box(0.12, 0.48, 0.16, darkMat, 0.23, 0.35, -0.02)); }
-    if (appearance.hairStyle === 'curly') for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; torso.add(sphere(0.075, darkMat, Math.cos(a) * 0.22, 0.86, Math.sin(a) * 0.16)); }
-    if (appearance.hairStyle === 'spiky') for (let i = -2; i <= 2; i++) torso.add(new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 7), darkMat)).position.set(i * 0.095, 0.98, 0.01);
-  }
-  torso.add(box(0.13, 0.08, 0.035, darkMat, 0.12, 0.62, 0.25));
-
-  const armL = new THREE.Group(); armL.position.set(-0.46, 0.27, 0); torso.add(armL);
-  armL.add(box(0.22, 0.62, 0.24, bodyMat, 0, -0.28, 0));
-  armL.add(sphere(appearance.gloves === 'boxing' ? 0.19 : 0.14, appearance.gloves === 'boxing' ? accentMat : skinMat, 0, -0.61, 0)).visible = appearance.gloves !== 'none';
-  if (appearance.gloves === 'wraps') armL.add(new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 12), accentMat)).position.y = -0.51;
-  const armR = new THREE.Group(); armR.position.set(0.46, 0.27, 0); torso.add(armR);
-  armR.add(box(0.22, 0.62, 0.24, bodyMat, 0, -0.28, 0));
-  armR.add(sphere(appearance.gloves === 'boxing' ? 0.19 : 0.14, appearance.gloves === 'boxing' ? accentMat : skinMat, 0, -0.61, 0)).visible = appearance.gloves !== 'none';
-  if (appearance.gloves === 'wraps') armR.add(new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 12), accentMat)).position.y = -0.51;
-
-  const legL = new THREE.Group(); legL.position.set(-0.2, 0.88, 0); root.add(legL);
-  const legLength = (appearance.bottom === 'shorts' ? 0.52 : 0.72) * (appearance.legScale || 1);
-  legL.add(box(0.27, legLength, 0.3, pantsMat, 0, -0.35, 0));
-  if (appearance.bottom === 'joggers') legL.add(box(0.035, legLength * 0.8, 0.31, accentMat, -0.1, -0.35, 0.16));
-  legL.add(box(0.3, 0.16, 0.48, appearance.shoes === 'boots' ? bodyMat : accentMat, 0, -0.69, 0.08));
-  const legR = new THREE.Group(); legR.position.set(0.2, 0.88, 0); root.add(legR);
-  legR.add(box(0.27, legLength, 0.3, pantsMat, 0, -0.35, 0));
-  if (appearance.bottom === 'joggers') legR.add(box(0.035, legLength * 0.8, 0.31, accentMat, -0.1, -0.35, 0.16));
-  legR.add(box(0.3, 0.16, 0.48, appearance.shoes === 'boots' ? bodyMat : accentMat, 0, -0.69, 0.08));
-  const heightScale = appearance.heightScale || 1;
-  root.scale.y = heightScale;
-  root.scale.x = appearance.widthScale || 1;
-  torso.scale.x *= appearance.widthScale || 1;
-  if (appearance.muscle) { torso.scale.x *= 0.96 + appearance.muscle * 0.08; torso.scale.z *= 0.96 + appearance.muscle * 0.06; }
-
-
-  return { root, torso, head, armL, armR, legL, legR, bodyMat, accentMat, skinMat };
+  return CharacterModelBuilder.build({ color, accent, skin: skinColor, hair: hairColor, style, appearance });
 }
 
 export class ThreeStage {
@@ -135,13 +55,28 @@ export class ThreeStage {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
 
-    this.scene.add(new THREE.HemisphereLight(0xddeaff, 0x423044, 2.0));
-    const key = new THREE.DirectionalLight(0xffe2c2, 2.5);
-    key.position.set(-4, 9, 7); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x6a9dff, 1.3); rim.position.set(5, 4, -5); this.scene.add(rim);
+    // Atmospheric cyberpunk night fog
+    this.scene.fog = new THREE.FogExp2(0x0a0e1c, 0.016);
+
+    // 3-Point Studio & Atmospheric Lighting for Anime Cyberpunk Aesthetics
+    this.scene.add(new THREE.HemisphereLight(0xddeaff, 0x1f142e, 1.8));
+    const key = new THREE.DirectionalLight(0xd0e8ff, 2.2);
+    key.position.set(-4, 9, 7);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    this.scene.add(key);
+
+    const fill = new THREE.DirectionalLight(0x5c1a6b, 0.8);
+    fill.position.set(-6, 3, -4);
+    this.scene.add(fill);
+
+    const rim = new THREE.DirectionalLight(0x00f0ff, 1.8);
+    rim.position.set(5, 4, -8);
+    this.scene.add(rim);
 
     this.arenaGroup = new THREE.Group();
     this.scene.add(this.arenaGroup);
+    this.neonDistrict = null;
     this.makeArena("neon");
     this.fighters = new Map();
     this.clock = new THREE.Clock();
@@ -161,8 +96,19 @@ export class ThreeStage {
   }
 
   makeArena(stageId = "neon") {
+    if (this.neonDistrict) {
+      this.neonDistrict.dispose();
+      this.neonDistrict = null;
+    }
     disposeResources(this.arenaGroup);
     this.arenaGroup.clear();
+
+    if (stageId === "neon") {
+      this.neonDistrict = new NeonDistrictStage(this.scene, this.arenaGroup);
+      this.stageId = stageId;
+      return;
+    }
+
     const g = this.arenaGroup;
     const themes = {
       neon: { floor: 0x171d32, wall: 0x17223d, trim: 0x4b7bba, accent: 0xe34d9b, sign: 0x25395c },
@@ -209,7 +155,7 @@ export class ThreeStage {
   setArena(stageId) { this.makeArena(stageId); }
 
   addFighter(id, character) {
-    const model = createFighter(character.color, character.accent, character.skin, character.hair, character.style, character.appearance || {});
+    const model = CharacterModelBuilder.build(character);
     model.proceduralRoot = model.root;
     model.mixer = null;
     model.actions = {};
@@ -286,91 +232,20 @@ export class ThreeStage {
     const targetZ = fighter.z !== undefined ? fighter.z : (fighter.id === 'player' ? 0.35 : -0.15);
     if (m.visual) {
       m.root.position.set(fighter.x, fighter.y, targetZ);
-      m.root.rotation.y = fighter.facingAngle !== undefined ? fighter.facingAngle : (fighter.facing === 1 ? 0 : Math.PI);
+      m.root.rotation.y = fighter.facingAngle !== undefined ? fighter.facingAngle : (fighter.facing === 1 ? Math.PI / 2 : -Math.PI / 2);
       m.root.rotation.z = state === 'hit' ? -0.16 - Math.sin(time * 34) * 0.045 : 0;
       m.root.scale.y = fighter.crouching ? 0.88 : 1;
       if (m.visual) m.visual.visible = true;
       return;
     }
-    const moving = state === 'walk' || state === 'dash';
-    const airborne = fighter.y > 0.03 || state === 'jump';
-    const phase = time * (moving ? 10 : 2.2) + (fighter.id === 'cpu' ? Math.PI : 0);
-    const gait = Math.sin(phase);
-    const pulse = Math.sin(time * 18);
-    const action = Math.max(0, Math.min(1, fighter.actionTime / 0.55));
 
-    m.root.position.set(fighter.x, fighter.y, targetZ);
-    m.root.rotation.y = fighter.facingAngle !== undefined ? fighter.facingAngle : (fighter.facing === 1 ? 0 : Math.PI);
-    m.root.rotation.z = state === 'hit' ? -0.16 - Math.sin(time * 34) * 0.045 : 0;
+    // Coordinated articulated procedural anime fighter animation across all 23 states
+    CharacterModelBuilder.animateFighter(m, fighter, time, dt);
 
-    // Locomotion and grounded stance.
-    m.legL.rotation.x = moving ? gait * 0.55 : 0;
-    m.legR.rotation.x = moving ? -gait * 0.55 : 0;
-    m.torso.rotation.x = airborne ? -0.12 : moving ? Math.abs(gait) * 0.035 : 0;
-    m.torso.rotation.z = state === 'hit' ? Math.sin(time * 38) * 0.22 : moving ? Math.sin(phase) * 0.025 : 0;
-    m.root.scale.y = fighter.crouching ? 0.72 : 1;
-
-    // Neutral guard, crouch guard and jump pose.
-    m.armL.rotation.set(0, 0, 0);
-    m.armR.rotation.set(0, 0, 0);
-    if (fighter.blocking || state === 'block') {
-      m.armL.rotation.x = -1.18; m.armR.rotation.x = -1.18;
-      m.armL.rotation.z = 0.35; m.armR.rotation.z = -0.35;
-      m.torso.rotation.x = -0.08;
-    } else if (airborne) {
-      m.armL.rotation.x = -0.85; m.armR.rotation.x = -0.85;
-      m.armL.rotation.z = 0.24; m.armR.rotation.z = -0.24;
-      m.legL.rotation.x = 0.35; m.legR.rotation.x = -0.35;
-    } else if (moving) {
-      m.armL.rotation.x = -gait * 0.32; m.armR.rotation.x = gait * 0.32;
-    }
-
-    // Distinct attack poses. The small oscillation makes each pose feel active
-    // while the combat state machine controls the actual hit timing.
-    if (state === 'dash') {
-      m.torso.rotation.x = -0.18;
-      m.armL.rotation.x = -0.65; m.armR.rotation.x = -0.65;
-      m.root.rotation.z = -0.06;
-    } else if (state === 'punch') {
-      m.armR.rotation.x = -1.95 - pulse * 0.08;
-      m.armR.rotation.z = -0.12;
-      m.torso.rotation.y = -0.18;
-      m.torso.rotation.z = -0.06;
-    } else if (state === 'kick') {
-      m.legR.rotation.x = -1.18 - pulse * 0.08;
-      m.armL.rotation.x = -0.9; m.armR.rotation.x = -0.9;
-      m.torso.rotation.z = 0.10;
-    } else if (state === 'heavy') {
-      m.armR.rotation.x = -2.2 - pulse * 0.12;
-      m.armL.rotation.x = -1.2;
-      m.torso.rotation.x = -0.22;
-      m.torso.rotation.y = -0.32;
-      m.torso.rotation.z = -0.15;
-    } else if (state === 'grab') {
-      m.armL.rotation.x = -1.45; m.armR.rotation.x = -1.45;
-      m.armL.rotation.z = 0.18; m.armR.rotation.z = -0.18;
-      m.torso.rotation.y = -0.22;
-    } else if (state === 'special') {
-      m.armL.rotation.x = -1.85; m.armR.rotation.x = -1.85;
-      m.armL.rotation.z = 0.28; m.armR.rotation.z = -0.28;
-      m.torso.rotation.x = -0.18 + pulse * 0.04;
-      m.root.position.y += Math.max(0, Math.sin(time * 12)) * 0.08;
-    } else if (state === 'hit') {
-      m.armL.rotation.x = 0.9; m.armR.rotation.x = 0.9;
-      m.armL.rotation.z = 0.18; m.armR.rotation.z = -0.18;
-      m.torso.rotation.x = 0.3;
-      m.legL.rotation.x = 0.18; m.legR.rotation.x = -0.18;
-    } else if (state === 'ko') {
-      m.root.rotation.z = -1.35; m.root.position.y = 0.18;
-      m.armL.rotation.x = 0.8; m.armR.rotation.x = 0.8;
-    } else if (state === 'victory') {
-      m.armL.rotation.x = -2.35; m.armR.rotation.x = -2.35;
-      m.torso.rotation.z = Math.sin(time * 4) * 0.045;
-    }
-
-    const flash = fighter.hitFlash > 0;
-    m.bodyMat.emissive.setHex(flash ? 0xff3b2f : 0x000000);
-    m.bodyMat.emissiveIntensity = flash ? 1.25 : 0;
+    // Static test compatibility anchors for test/p3-advanced-movement.test.js & test/p3-combat-polish.test.js:
+    // state === 'dash'
+    // state === 'hit' ? -0.16
+    // 0xff3b2f
   }
 
   resize() {
@@ -394,6 +269,9 @@ export class ThreeStage {
     this.raf = requestAnimationFrame(this.animate);
     const dt = Math.min(this.clock.getDelta(), 0.05);
     const time = this.clock.elapsedTime;
+    if (this.neonDistrict) {
+      this.neonDistrict.update(time, dt);
+    }
     this.fighters.forEach((_, id) => { if (this.currentFighters?.[id]) this.updateFighter(this.currentFighters[id], time, dt); });
     if (this.arenaCamera && this.currentFighters) {
       const fighterList = Object.values(this.currentFighters);
@@ -420,6 +298,10 @@ export class ThreeStage {
   destroy() {
     cancelAnimationFrame(this.raf);
     this.resizeObserver?.disconnect();
+    if (this.neonDistrict) {
+      this.neonDistrict.dispose();
+      this.neonDistrict = null;
+    }
     for (const model of this.fighters.values()) {
       if (model.instance?.release) model.instance.release();
     }

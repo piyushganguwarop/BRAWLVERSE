@@ -291,7 +291,11 @@ export class FightScene extends Phaser.Scene {
     }
     this.player.updateFacing(this.cpu);
     this.cpu.updateFacing(this.player);
+    const p1WasDashing = this.player.dashTime > 0;
     this.player.update(dt, input);
+    if (this.player.dashTime > 0 && !p1WasDashing) audioManager.playDash();
+
+    const p2WasDashing = this.cpu.dashTime > 0;
     if (this.localVersus) {
       this.cpu.update(dt, input2);
       this.handleSecondPlayerActions(input2);
@@ -300,6 +304,7 @@ export class FightScene extends Phaser.Scene {
     } else if (this.training && this.trainingSettings.dummy === 'guard') {
       this.cpu.update(dt, { block: true });
     } else this.updateCpu(dt);
+    if (this.cpu.dashTime > 0 && !p2WasDashing) audioManager.playDash();
     this.separateFighters();
     this.handlePlayerActions(input);
     const playerHealthBefore = this.player.health;
@@ -449,19 +454,29 @@ export class FightScene extends Phaser.Scene {
     if (launcher) audioManager.playLauncher();
     else if (perfect || blocked) audioManager.playBlock(perfect);
     else if (action === 'special') audioManager.playSpecial();
+    else if (action === 'heavy') audioManager.playHeavy();
     else if (action === 'kick') audioManager.playKick();
     else if (action === 'grab') audioManager.playGrab();
     else audioManager.playPunch();
 
     if (!blocked && !perfect) {
-      this.hitStop = Math.max(this.hitStop, action === 'special' ? 0.095 : action === 'kick' ? 0.065 : 0.045);
+      this.hitStop = Math.max(this.hitStop, action === 'special' ? 0.095 : (action === 'heavy' || launcher) ? 0.075 : action === 'kick' ? 0.065 : 0.045);
       const isReduced = localStorage.getItem('fighter.settings.shake') === '1';
       if (this.cameras?.main) {
         if (isReduced) {
-          this.cameras.main.shake(action === 'special' ? 40 : 25, action === 'special' ? 0.0015 : 0.0008);
+          this.cameras.main.shake(action === 'special' ? 40 : (action === 'heavy' || launcher) ? 30 : 25, action === 'special' ? 0.0015 : 0.0008);
         } else {
-          this.cameras.main.shake(action === 'special' ? 150 : 85, action === 'special' ? 0.006 : 0.0025);
+          this.cameras.main.shake(action === 'special' ? 150 : (action === 'heavy' || launcher) ? 115 : 85, action === 'special' ? 0.006 : 0.0025);
         }
+      }
+      if (this.three?.arenaCamera) {
+        const camShake = isReduced
+          ? (action === 'special' ? 0.15 : (action === 'heavy' || launcher) ? 0.10 : 0.05)
+          : (action === 'special' ? 0.38 : (action === 'heavy' || launcher) ? 0.28 : 0.14);
+        this.three.arenaCamera.shake(camShake, action === 'special' ? 0.25 : 0.18);
+      }
+      if (target && this.three?.neonDistrict && (Math.abs(target.x) >= 11 || Math.abs(target.z) >= 4)) {
+        this.three.neonDistrict.pulseBoundary();
       }
     }
     if (combo > 1 && !blocked) {

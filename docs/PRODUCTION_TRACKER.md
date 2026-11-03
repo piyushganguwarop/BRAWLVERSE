@@ -2,8 +2,8 @@
 
 **Master Blueprint Reference:** [MASTER_PRODUCTION_BLUEPRINT.md](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/MASTER_PRODUCTION_BLUEPRINT.md)  
 **Active Working Branch:** `v2-reconstruction`  
-**Current Phase:** Phase 2 (First Arena: Neon District)  
-**Overall Status:** IN PROGRESS
+**Current Phase:** Phase 2 (Neon District Arena) & Phase 3 (First Fighter: Atlas) — Vertical Slice  
+**Overall Status:** COMPLETED (Vertical Slice Playable & Validated)
 
 ---
 
@@ -43,42 +43,42 @@
 - [x] **Centralized Asset Loading:** `ThreeStage` and UI components route model & texture requests via `AssetLoader`; caching, instantiation cloning, and GPU resource disposal implemented.
 - [x] **Authoritative Configuration:** `gameConfig.world` establishes single source of truth for `Fighter`, `ArenaCamera`, and `ThreeStage`; contradictory dimensions removed.
 - [x] **Automated Integration Test Suite:** 12 new comprehensive integration tests in [`test/phase1-1-integration.test.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/test/phase1-1-integration.test.js) (115/115 total tests passing).
-- [x] **In-Browser Validation:** Verified live in headless Microsoft Edge Chromium across all 9 criteria (2 fighters moving in 3D, camera framing, depth-aware attacks, keyboard, touch, repeated match restart, F3 performance HUD, 0 console errors) ([`TEST_RESULTS.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/TEST_RESULTS.md)).
-- [x] **Documentation & Limitation Tracking:** Recorded in [`TEST_RESULTS.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/TEST_RESULTS.md), [`KNOWN_ISSUES.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/KNOWN_ISSUES.md), and [`TECHNICAL_ARCHITECTURE.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/TECHNICAL_ARCHITECTURE.md).
-
-*Exit Criteria: COMPLETE. Full 3D movement, unified input, depth-aware combat, and centralized asset loading verified in automated test suite and live Chromium browser runtime.*
+- [x] **In-Browser Validation:** Verified live in headless Microsoft Edge Chromium across all 9 criteria ([`TEST_RESULTS.md`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/TEST_RESULTS.md)).
 
 ---
 
 ### Phase 1.2: Complete Input, 3D Combat and Asset Lifecycle Hardening
-- [x] **Disambiguated Input Bindings:** Eliminated all overlapping actions for Player 2 (Numpad 0/1/3/Decimal/4/5/6/7/8/9 with navigation cluster fallback); completely separated W/S depth motion from Jump/Crouch actions.
-- [x] **Single Source of Truth:** `InputManager` acts as the sole authoritative logical input pipeline; `InputController` exposes unified states without duplicate physical key processing or sticky states.
-- [x] **True 3D Facing & Combat Alignment:** Planar vector dot product checks ($\vec{F}_{\text{attacker}} \cdot \vec{D}_{\text{target}} \ge 0.20$); rear strikes cleanly miss; directional 3D block validation ($\vec{F}_{\text{defender}} \cdot \vec{U}_{\text{toAttacker}} \ge 0.20$); close-contact hysteresis deadzone ($< 0.18\text{m}$) prevents erratic flipping.
-- [x] **Asset Loader Cache & Lifecycle Hardening:** In-flight request deduplication via `loadingPromises`; typed cache keys (`model:*`, `texture:*`); transient failure recovery without permanent cache poisoning; reference-counted model instances with isolated material cloning and safe GPU disposal.
-- [x] **Real Browser Event Validation:** Enhanced CDP test suite using real `KeyboardEvent` and `PointerEvent` dispatches, verifying the complete pipeline from browser event to rendered Three.js movement.
-- [x] **10 Restart Cycles Leak Verification:** 10 consecutive match reset cycles executed in browser runtime verifying 0 memory leaks, 0 growing listeners, exact fighter count retention (2), and 0 stuck input states.
-- [x] **Automated Test Suite Expansion:** 137/137 passing tests across 25 suites (including dedicated `phase1-2-input.test.js`, `phase1-2-combat3d.test.js`, and `phase1-2-asset-lifecycle.test.js`).
+- [x] **Disambiguated Input Bindings:** Eliminated all overlapping actions for Player 2; separated W/S depth motion from Jump/Crouch actions.
+- [x] **Single Source of Truth:** `InputManager` acts as the sole authoritative logical input pipeline; legacy Phaser keys removed.
+- [x] **True 3D Facing & Combat Alignment:** Planar vector dot product checks; rear strikes miss; directional 3D blocking; contact deadzone ($< 0.18\text{m}$) prevents flipping.
+- [x] **Asset Loader Cache & Lifecycle Hardening:** In-flight request deduplication; typed cache keys; deferred GPU disposal via `retiredAssets`; reference-counted model instances.
+- [x] **Full Kick & Heavy Action Pipeline Separation:** `heavy: mgr.heavy || kick` removed. `heavy` is a fully realized combat action with distinct damage, cooldown, and animations.
+- [x] **Natural Browser Game Loop Validation:** Verified in Microsoft Edge headless that inputs naturally drive fighter positions and states across real requestAnimationFrame ticks.
 
 ---
 
-### Phase 1.2 Final Source-Level Correction
-- [x] **Complete Removal of Legacy Phaser Key Processing:** Obsolete Phaser keyboard key objects and registrations removed from `InputController`. `InputManager` is the sole source of physical keyboard input.
-- [x] **Dash Binding Isolation:** Player 1 dash actions (`KeyE`/`KeyQ`) and Player 2 dash actions (`Numpad3`/`NumpadDecimal`) operate with total isolation. Numpad4 exclusively triggers P2 punch; Numpad6 exclusively triggers P2 heavy.
-- [x] **Full Kick & Heavy Action Pipeline Separation:** `heavy: mgr.heavy || kick` removed. `heavy` is now a fully realized combat action configured in `gameConfig.combat` (16 damage, 0.72s cooldown, 0.58s duration, 0.65 knockback, 1.5 height) with distinct animation mapping and state machine support.
-- [x] **Safe AssetLoader.clear() Lifecycle & Deferred Disposal:** `clear()` protects active instances by deferring GPU buffer disposal to `retiredAssets`, executing base geometry/texture cleanup only when the final instance releases. Cloned materials are cleanly disposed, repeated release calls are idempotent, and texture ownership is preserved.
-- [x] **3D XZ Knockback and Grab Displacement:** Normalized 3D directional vectors $(\Delta X / \text{dist}, \Delta Z / \text{dist})$ consistently applied to both knockback velocity and grab displacement on both axes, respecting arena boundaries.
-- [x] **Natural Browser Game Loop Validation:** Verified in Microsoft Edge headless that inputs naturally drive fighter positions and states across real requestAnimationFrame ticks without synthetic `scene.update()` calls.
-- [x] **Regression Test Suite:** Added `test/phase1-2-regressions.test.js` with 10 comprehensive regression tests (147/147 total unit tests passing).
+### Phase 2: First Arena Production (Neon District) & Phase 3: First Fighter (Atlas) — Vertical Slice
+- [x] **Neon District 3D Cyberpunk Rooftop Arena ([`NeonDistrictStage.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/src/three/NeonDistrictStage.js)):**
+  - Detailed steel deck platform with hazard border trim and central glowing energy ring.
+  - 4 corner pylons with pulsing cyan laser boundary rails that intensify on boundary impacts.
+  - Rooftop industrial infrastructure: dual HVAC units with rotating fan blades and penthouse access bulkhead.
+  - Multi-tiered cyberpunk skyline background with high-density window matrix textures.
+  - Glowing procedural neon billboards ("BRAWL WARS", "NEO TOKYO", Japanese kanji ネオ東京).
+  - Animated flying hovercars with headlights and taillights navigating sky-traffic lanes.
+  - 3-point anime studio lighting (Key, Fill, Rim) and atmospheric night fog (`FogExp2`).
+- [x] **First Complete Fighter: Atlas ([`CharacterModelBuilder.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/src/three/CharacterModelBuilder.js)):**
+  - Heroic 7.5-head anime proportions with sculpted silhouette and anime facial features.
+  - High-collar cyber jacket, shoulder pauldrons, spiky anime hairstyle, and tactical joggers.
+  - Signature right-arm Titan Energy Gauntlet with glowing cyan conduits and reinforced knuckle guards.
+  - Articulated 16-joint hierarchy (`hips`, `torso`, `chest`, `head`, `shoulders`, `elbows`, `hands`, `hipJoints`, `knees`, `ankles`).
+  - Procedural anime animation evaluation across 23 distinct combat states (`idle`, `walk`, `dash`, `crouch`, `block`, `perfect_block`, `punch`, `kick`, `heavy`, `grab`, `special` *Titan Breaker*, `hit`, `ko`, `victory`, `defeat`).
+- [x] **Combat Feedback & Sound Integration:**
+  - Synthesized heavy attack impact (`playHeavy`) and dash whoosh (`playDash`) in [`AudioManager.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/src/audio/AudioManager.js).
+  - 3D impact camera shake via [`ArenaCamera.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/src/three/ArenaCamera.js) on heavy attacks (`0.28`), specials (`0.38`), and launchers.
+  - Boundary containment laser pulse triggered when fighters hit arena boundaries.
+- [x] **Testing & Browser Validation:**
+  - 151/151 unit tests passing (`npm test`).
+  - 15/15 browser validation tests passing in headless Microsoft Edge via CDP (`node scripts/validate-browser.js`).
+  - Production build succeeds without errors (`npm run build`).
 
-*Exit Criteria: COMPLETE. All Phase 1.2 input regressions, combat pipeline distinctions, and asset lifecycle edge cases verified and certified ready for Phase 2 arena construction.*
-
----
-
-### Phase 2: First Arena Production (Neon District)
-- [ ] Neon District 3D modular geometry construction
-- [ ] Anime cel-shaded materials, emission maps, and post-processing bloom
-- [ ] Ground collision mesh & authoritative physics bounds synchronization
-- [ ] Atmospheric VFX (rain particles, neon dust, volumetric fog)
-- [ ] Production lighting setup (directional sun/moon, ambient skylight, point light sources)
-- [ ] Dynamic camera tracking & framing refinement for Neon District layout
-- [ ] Performance validation: maintain stable 60 FPS on desktop and mobile targets
+*Exit Criteria: COMPLETE. Full vertical slice with Neon District arena and Atlas fighter verified in automated test suite and live Chromium browser runtime.*
