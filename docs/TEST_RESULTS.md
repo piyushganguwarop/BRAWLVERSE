@@ -260,3 +260,28 @@
      - **Ancient Temple:** `isActive: true, fightStageId: 'temple', threeStageId: 'temple', arenaChildrenCount: 26, playerReady: true, cpuReady: true`.
      - **City Rooftop:** `isActive: true, fightStageId: 'rooftop', threeStageId: 'rooftop', arenaChildrenCount: 36, playerReady: true, cpuReady: true`.
    - **Result:** 100% Pass across all in-browser gameplay scenarios. Live combat scenes construct the exact 3D arena assets corresponding to the user's selection.
+
+
+---
+
+## Milestone MP1: Two-Player Online Multiplayer Test Results
+
+- **Date:** 2026-11-04
+- **Target Branch:** `v2-reconstruction`
+- **Integration Test Suite:** [`test/multiplayer-integration.test.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/test/multiplayer-integration.test.js)
+- **Overall Suite Status:** 187 / 187 PASS (100% Green, 0 Failures).
+
+### Multiplayer Integration Subtest Breakdown:
+1. **Room Creation:** Player 1 creates room, receives 6-character uppercase hex code, slot 0, host status, and neon stage (`PASS`).
+2. **Code Validation:** Rejects invalid room codes (`INVALID`) and non-existent codes (`FFFFFF`) with informative errors (`PASS`).
+3. **Room Joining:** Player 2 joins with code, receives slot 1, guest status, and both players receive synchronized `room:players` payload (`PASS`).
+4. **Room Capacity Limit:** Player 3 attempting to join full 2-player room is rejected with `"This room is full."` (`PASS`).
+5. **Selection Synchronization:** Guest changing fighter to `myst` and Host changing stage to `temple` syncs in real time via `room:players` and `room:stage` (`PASS`).
+6. **Ready Gates & Match Launch:** Selection locked when player is ready; `room:start` emits only when both players are ready (`PASS`).
+7. **Authoritative 3D Combat:** Server calculates 3D movement ($X$ and $Z$ depth), clamps movement axes, rejects NaN/Infinity and client-reported position/health spoofing; enforces monotonic input sequence numbering; detects volumetric punch hit in 3D, applies damage, and emits `match:hit` to both clients (`PASS`).
+8. **Rematch Voting:** Dual-player rematch voting resets round scores, recreates fighters, and emits `room:rematch` (`PASS`).
+9. **Disconnection & Grace Period Reconnection:** Peer disconnect triggers 30-second grace timer and `room:peer-disconnected`; reconnect with preserved token restores room connection; explicit leave cleanly tears down room (`PASS`).
+
+### Production Build Verification:
+- **Command:** `npm run build`
+- **Result:** 65 modules transformed cleanly in 11.3s with zero build errors. Output in `dist/`.

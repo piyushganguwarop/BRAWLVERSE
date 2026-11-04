@@ -257,23 +257,136 @@ export class SelectScene extends Phaser.Scene {
 
   async openOnlinePanel() {
     const panel = document.getElementById('online-panel'); if (!panel) return; panel.hidden = false;
-    const status = document.getElementById('online-status'), players = document.getElementById('room-players'), ready = document.getElementById('room-ready');
+    const status = document.getElementById('online-status');
+    const players = document.getElementById('room-players');
+    const ready = document.getElementById('room-ready');
     const name = () => document.getElementById('online-name').value.trim() || 'Player';
     const fighter = () => roster[this.selectedIndex].id;
-    const close = () => { panel.hidden = true; }; document.getElementById('online-close').onclick = close;
-    const showPlayers = list => { players.innerHTML = list.map((p, i) => `<div>${p.host || i === 0 ? 'HOST' : 'GUEST'}: ${this.escapeHtml(p.name)} · ${this.escapeHtml(p.fighterId)} · ${p.ready ? 'READY' : 'NOT READY'}</div>`).join(''); ready.disabled = list.length !== 2; };
-    try { status.textContent = 'Connecting to room server…'; await onlineRoom.connect(); status.textContent = 'Create a room or enter a friend code.'; }
-    catch { status.textContent = 'Room server unavailable. Deploy the Node server and set VITE_GAME_SERVER.'; return; }
+    const close = () => {
+      panel.hidden = true;
+      if (onlineRoom.isInRoom && !this.enteringOnlineMatch) {
+        onlineRoom.leave();
+        this.localReady = false;
+        ready.textContent = 'READY';
+        ready.disabled = true;
+      }
+    };
+    document.getElementById('online-close').onclick = close;
+
+    const showPlayers = list => {
+      this.lastPlayerList = list;
+      const currentStage = this.stages[this.stageIndex];
+      const stageHtml = `<div class="online-stage-row" style="margin: 8px 0 10px; padding: 9px 12px; background: #0e1524; border: 1px solid #2a3952; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;"><span style="color: #94a3b8; font-size: 11px; letter-spacing: 1px; font-weight: 700;">ARENA</span><strong style="color: #38bdf8; font-size: 13px; letter-spacing: 1.5px;">${this.escapeHtml(currentStage.name)}</strong></div>`;
+
+      const playersHtml = list.map((p, i) => {
+        const isSelf = p.slot === onlineRoom.slot;
+        const role = p.host || i === 0 ? 'HOST' : 'GUEST';
+        const fighterObj = roster.find(f => f.id === p.fighterId) || { name: p.fighterId.toUpperCase() };
+        const readyColor = p.ready ? '#4ade80' : '#94a3b8';
+        const readyText = p.ready ? 'READY' : 'NOT READY';
+        const border = isSelf ? 'border: 1px solid #38bdf8;' : 'border: 1px solid #2a3952;';
+        return `<div class="online-player-card" style="padding: 10px 12px; background: #0e1524; border-radius: 8px; ${border} display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div>
+            <div style="font-size: 10px; color: ${p.host ? '#f2c46b' : '#38bdf8'}; font-weight: 800; letter-spacing: 1px;">${role}${isSelf ? ' (YOU)' : ''}</div>
+            <div style="font-size: 14px; font-weight: 700; color: #f8fafc;">${this.escapeHtml(p.name)}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; font-weight: 700; color: #e2e8f0;">${this.escapeHtml(fighterObj.name)}</div>
+            <div style="font-size: 11px; font-weight: 800; color: ${readyColor}; letter-spacing: 1px;">${readyText}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      players.innerHTML = stageHtml + playersHtml;
+      ready.disabled = list.length !== 2;
+      if (this.localReady) {
+        ready.textContent = 'CANCEL READY (WAITING)';
+        ready.style.background = '#334155';
+        ready.style.color = '#f8fafc';
+      } else {
+        ready.textContent = 'READY';
+        ready.style.background = '#f2c46b';
+        ready.style.color = '#171923';
+      }
+    };
+
+    try {
+      status.textContent = 'Connecting to room server…';
+      await onlineRoom.connect();
+      status.textContent = 'Create a room or enter a friend code.';
+    } catch {
+      status.textContent = 'Room server unavailable. Deploy the Node server and set VITE_GAME_SERVER.';
+      return;
+    }
+
     const selected = () => ({ fighterId: fighter(), stageId: this.stages[this.stageIndex].id });
-    document.getElementById('room-create').onclick = () => onlineRoom.create({ name: name(), ...selected() });
-    document.getElementById('room-join').onclick = () => { onlineRoom.join(document.getElementById('room-code').value, { name: name(), ...selected() }); onlineRoom.select(selected()); };
-    ready.onclick = () => { onlineRoom.select(selected()); onlineRoom.ready(true); };
+
+    document.getElementById('room-create').onclick = () => {
+      this.localReady = false;
+      onlineRoom.create({ name: name(), ...selected() });
+    };
+
+    document.getElementById('room-join').onclick = () => {
+      this.localReady = false;
+      const code = document.getElementById('room-code').value.trim();
+      onlineRoom.join(code, { name: name(), ...selected() });
+      onlineRoom.select(selected());
+    };
+
+    ready.onclick = () => {
+      this.localReady = !this.localReady;
+      onlineRoom.select(selected());
+      onlineRoom.ready(this.localReady);
+      if (this.localReady) {
+        ready.textContent = 'CANCEL READY (WAITING)';
+        ready.style.background = '#334155';
+        ready.style.color = '#f8fafc';
+      } else {
+        ready.textContent = 'READY';
+        ready.style.background = '#f2c46b';
+        ready.style.color = '#171923';
+      }
+    };
+
     if (!this.onlineSubscriptions) {
       this.onlineSubscriptions = [];
-      this.onlineSubscriptions.push(onlineRoom.on('room:joined', data => { status.textContent = `Room ${data.code} · You are ${data.slot === 0 ? 'Host' : 'Guest'}`; document.getElementById('room-code').value = data.code; showPlayers(data.players); }));
+      this.onlineSubscriptions.push(onlineRoom.on('room:joined', data => {
+        status.textContent = `Room ${data.code} · You are ${data.slot === 0 ? 'Host' : 'Guest'}`;
+        document.getElementById('room-code').value = data.code;
+        if (data.stageId) {
+          const idx = this.stages.findIndex(s => s.id === data.stageId);
+          if (idx !== -1) { this.stageIndex = idx; this.updateStageLabel(); }
+        }
+        showPlayers(data.players);
+      }));
       this.onlineSubscriptions.push(onlineRoom.on('room:players', showPlayers));
-      this.onlineSubscriptions.push(onlineRoom.on('room:error', message => { status.textContent = message; }));
-      this.onlineSubscriptions.push(onlineRoom.on('room:start', data => { showPlayers(data.players); panel.hidden = true; this.enteringOnlineMatch = true; this.scene.start('FightScene', { online: true, mode: 'online', slot: onlineRoom.slot, players: data.players, stageId: data.stageId }); }));
+      this.onlineSubscriptions.push(onlineRoom.on('room:stage', data => {
+        if (data?.stageId) {
+          const idx = this.stages.findIndex(s => s.id === data.stageId);
+          if (idx !== -1) {
+            this.stageIndex = idx;
+            this.updateStageLabel();
+            if (onlineRoom.isInRoom && this.lastPlayerList) {
+              showPlayers(this.lastPlayerList);
+            }
+          }
+        }
+      }));
+      this.onlineSubscriptions.push(onlineRoom.on('room:error', message => {
+        status.textContent = message;
+      }));
+      this.onlineSubscriptions.push(onlineRoom.on('room:start', data => {
+        showPlayers(data.players);
+        panel.hidden = true;
+        this.enteringOnlineMatch = true;
+        this.scene.start('FightScene', {
+          online: true,
+          mode: 'online',
+          slot: onlineRoom.slot,
+          players: data.players,
+          stageId: data.stageId
+        });
+      }));
     }
   }
 
@@ -578,6 +691,7 @@ export class SelectScene extends Phaser.Scene {
   }
 
   changeStage(direction) {
+    if (onlineRoom.isInRoom && this.localReady) return;
     const next = (this.stageIndex + direction + this.stages.length) % this.stages.length;
     this.stageIndex = next;
     const stage = this.stages[next];
@@ -590,6 +704,9 @@ export class SelectScene extends Phaser.Scene {
       this.subtitle.setText(`${modeName}  ·  LEVEL ${this.progression.level}  ·  ${this.progression.coins} COINS`);
     }
     this.updateStageLabel();
+    if (onlineRoom.isInRoom && !this.localReady && onlineRoom.slot === 0) {
+      onlineRoom.select({ fighterId: roster[this.selectedIndex].id, stageId: stage.id });
+    }
   }
 
   unlockCurrentStage() {
@@ -622,6 +739,7 @@ export class SelectScene extends Phaser.Scene {
 
   select(index) {
     if (!isFighterUnlocked(roster[index].id)) return;
+    if (onlineRoom.isInRoom && this.localReady) return;
     audioManager.playSelect();
     this.selectedIndex = index;
     const fighter = roster[index];
@@ -632,6 +750,9 @@ export class SelectScene extends Phaser.Scene {
     this.specialLabel.setText(`SPECIAL  /  ${fighter.specialName}`);
     this.updateSelectionPreview(fighter);
     this.infoBg.setStrokeStyle(1, fighter.accent || 0x12ddeb);
+    if (onlineRoom.isInRoom && !this.localReady) {
+      onlineRoom.select({ fighterId: fighter.id, stageId: this.stages[this.stageIndex].id });
+    }
   }
 
   layout({ width, height }) {

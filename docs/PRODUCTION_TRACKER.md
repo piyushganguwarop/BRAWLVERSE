@@ -271,3 +271,42 @@
        - In-browser runtime validation of zero-cost browsing, locked match prevention, insufficient coin rejection, and explicit unlock confirmation.
 
 *Exit Criteria: Milestones 1 and 2 COMPLETE. Verified across 177/177 automated tests, production build, 10 visual screenshots, and actual multi-arena match startup in the browser.*
+
+---
+
+### Milestone MP1: Functional Two-Player Online Multiplayer
+- [x] **Room Creation and Joining:**
+  - Complete private room workflow: Player 1 creates room, receives 6-character room code, and enters lobby as Host.
+  - Player 2 joins with room code and enters lobby as Guest.
+  - Both players see their own player name, opponent name, selected fighter, selected arena, host/guest status, connection status, and ready status.
+  - Server prevents > 2 players, invalid codes, joining full rooms, and early match start.
+- [x] **Selection Synchronization:**
+  - Real-time selection sync (`room:select`) broadcasts player selections (`room:players`) and arena changes (`room:stage`).
+  - Selection changes are locked once a player is ready.
+  - Both players must confirm ready before `room:start` is triggered.
+- [x] **Server-Authoritative Combat and Input Validation:**
+  - Extended validation in `server/validation.js` supporting 3D movement axes (`moveX`, `moveZ`) and all combat actions (`punch, kick, heavy, special, grab, block, crouch, depthUp, depthDown, dashForward, dashBack`).
+  - Strict validation of axes: finite numbers, clamped to `[-1, 1]`, normalized for hypot $> 1.0$, rejection of NaN and Infinity.
+  - Rejection of client-reported positions (`x, y, z`) and health/damage spoofing.
+  - Monotonic input sequence numbering enforced per player; replayed sequence numbers rejected.
+  - Input rate-limiting enforced (40 packets/sec).
+- [x] **3D Movement, Depth & State Synchronization:**
+  - 30 Hz authoritative simulation in `server/AuthoritativeMatch.js` calculating true 3D position ($X, Y, Z$), depth movement, depth-aware facing angle, and 3D push separation.
+  - Volumetric 3D hit detection via `CombatSystem.check3DHit` evaluating horizontal reach ($X$), depth reach ($Z$), vertical reach ($Y$), and 3D directional facing alignment.
+  - Full snapshot broadcasting including `x, y, z, vx, vy, vz, facing, facingAngle, health, energy, state, blocking, crouching, actionTime, activeAction, hitFlash, dashTime`.
+  - Client position smoothing: `FightScene.update()` smoothly interpolates positions toward authoritative server targets for stutter-free 3D rendering.
+- [x] **Combat Feedback & Audio/Visual Sync:**
+  - Authoritative hit broadcasting (`match:hit`) emitting damage, blocked, perfect block, combo count, and launcher state.
+  - Both clients trigger synchronized float text, impact particles, audio effects, camera shake, hit-stop, and combo banner.
+- [x] **Match Flow & Rematch:**
+  - Synchronized round timer (99s), round transitions, and match victory/defeat screens matching authoritative server results.
+  - Dual-confirmation rematch voting resets round score and fighters cleanly.
+- [x] **Disconnection & Reconnection:**
+  - 30-second disconnect grace period with live `OPPONENT DISCONNECTED · WAITING` status text.
+  - Reconnection token preservation in `sessionStorage` allowing seamless re-entry upon reconnection.
+  - Clean room teardown when grace period expires or player leaves explicitly.
+- [x] **Verification:**
+  - Real multi-client integration test suite in [`test/multiplayer-integration.test.js`](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/test/multiplayer-integration.test.js) with two independent Socket.IO clients running end-to-end lobby, sync, combat, rematch, and disconnect tests.
+  - 187/187 unit and integration tests passing (`npm test`). Clean production build (`npm run build`).
+
+*Exit Criteria: Milestone MP1 COMPLETE. Two-player online multiplayer functional and verified across 187/187 tests, full Socket.IO integration, server-authoritative 3D combat, and production build.*

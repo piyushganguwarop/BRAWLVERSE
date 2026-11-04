@@ -87,8 +87,9 @@ function attachPlayer(socket, room, player, slot, eventName) {
   socket.data.token = player.token;
   room.match?.setConnected(slot, true);
   touchRoom(room);
-  socket.emit(eventName, { code: room.id, slot, token: player.token, players: publicPlayers(room) });
+  socket.emit(eventName, { code: room.id, slot, token: player.token, stageId: room.stageId, players: publicPlayers(room) });
   sendPlayers(room);
+  io.to(room.id).emit('room:stage', { stageId: room.stageId });
 }
 
 function removePlayer(room, player, message = 'A player left the room.') {
@@ -184,19 +185,37 @@ io.on('connection', socket => {
     }
   });
 
-  socket.on('room:select', fighterId => {
-    if (!allowEvent(socket, 'room:select', 12, 10000)) return;
+  socket.on('room:select', payload => {
+    if (!allowEvent(socket, 'room:select', 15, 10000)) return;
     const owned = getOwnedPlayer(socket);
     if (!owned || owned.room.started || owned.player.ready) return;
-    const selection = typeof fighterId === 'string' ? { fighterId } : fighterId;
-    if (!selection || typeof selection.fighterId !== 'string' || cleanFighterId(selection.fighterId) !== selection.fighterId) return;
-    owned.room.started = false;
-    owned.room.rematchVotes.clear();
-    owned.player.fighterId = selection.fighterId;
-    owned.room.stageId = cleanStageId(selection.stageId ?? owned.room.stageId);
-    owned.player.ready = false;
-    touchRoom(owned.room);
-    sendPlayers(owned.room);
+    const selection = typeof payload === 'string' ? { fighterId: payload } : payload;
+    if (!selection) return;
+    let fighterChanged = false;
+    if (selection.fighterId && cleanFighterId(selection.fighterId) === selection.fighterId) {
+      if (owned.player.fighterId !== selection.fighterId) {
+        owned.player.fighterId = selection.fighterId;
+        fighterChanged = true;
+      }
+    }
+    let stageChanged = false;
+    if (selection.stageId) {
+      const cleaned = cleanStageId(selection.stageId);
+      if (owned.room.stageId !== cleaned) {
+        owned.room.stageId = cleaned;
+        stageChanged = true;
+      }
+    }
+    if (fighterChanged || stageChanged) {
+      owned.room.started = false;
+      owned.room.rematchVotes?.clear();
+      owned.player.ready = false;
+      touchRoom(owned.room);
+      sendPlayers(owned.room);
+      if (stageChanged) {
+        io.to(owned.room.id).emit('room:stage', { stageId: owned.room.stageId });
+      }
+    }
   });
 
   socket.on('match:input', payload => {
@@ -209,11 +228,12 @@ io.on('connection', socket => {
   });
 
   socket.on('match:rematch', () => {
-    if (!allowEvent(socket, 'match:rematch', 3, 60000)) return;
+    if (!allowEvent(socket, 'match:rematch', 6, 60000)) return;
     const owned = getOwnedPlayer(socket);
     if (!owned || !owned.room.started || !owned.room.match || owned.room.players.length !== 2 || !owned.room.players.every(player => player.connected)) return;
     owned.room.rematchVotes ||= new Set();
     owned.room.rematchVotes.add(owned.player.token);
+    io.to(owned.room.id).emit('match:rematch-vote', { slot: socket.data.slot });
     if (owned.room.players.every(player => owned.room.rematchVotes.has(player.token))) {
       owned.room.rematchVotes.clear();
       owned.room.match.rematch();
@@ -251,8 +271,34 @@ io.on('connection', socket => {
   });
 });
 
+export function startServer(customPort = 0) {
+  return new Promise(resolve => {
+    const serverInstance = http.listen(customPort, '0.0.0.0', () => {
+      const actualPort = serverInstance.address().port;
+      resolve({ server: serverInstance, port: actualPort });
+    });
+  });
+}
+
+export function stopServer() {
+  for (const room of rooms.values()) {
+    room.match?.stop();
+    if (room.expiry) clearTimeout(room.expiry);
+  }
+  rooms.clear();
+  return new Promise(resolve => {
+    io.close(() => {
+      http.close(resolve);
+    });
+  });
+}
+
 const port = Number(process.env.PORT || 3001);
-http.listen(port, '0.0.0.0', () => {
-  console.log(`Brawl Wars room server listening on ${port}`);
-  if (production && !configuredOrigins.length) console.error('ALLOWED_ORIGIN is required in production. Browser origins will be rejected.');
-});
+if (process.env.NODE_ENV !== 'test' && !http.listening) {
+  http.listen(port, '0.0.0.0', () => {
+    console.log(`Brawl Wars room server listening on ${port}`);
+    if (production && !configuredOrigins.length) console.error('ALLOWED_ORIGIN is required in production. Browser origins will be rejected.');
+  });
+}
+
+export { app, http, io, rooms };

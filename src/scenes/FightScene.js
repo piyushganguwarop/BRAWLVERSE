@@ -50,17 +50,20 @@ export class FightScene extends Phaser.Scene {
     this.remoteUnsubscribe?.();
     this.remoteUnsubscribe = this.online ? onlineRoom.onRemoteInput(({input}) => { this.remoteInput = input; }) : null;
     this.peerConnected = true;
-    this.peerDisconnectUnsubscribe = this.online ? onlineRoom.on('room:peer-disconnected', () => {
+    this.peerDisconnectUnsubscribe = this.online ? onlineRoom.on('room:peer-disconnected', (payload = {}) => {
       this.peerConnected = false; this.remoteInput = {};
+      const graceMs = payload.graceMs ?? 30000;
       this.statusText?.setText('OPPONENT DISCONNECTED · WAITING').setFontSize('22px').setAlpha(1);
       clearTimeout(this.peerTimeout);
-      this.peerTimeout = setTimeout(() => { if (!this.peerConnected) { onlineRoom.leave(); this.scene.start('MainMenuScene'); } }, 30000);
+      this.peerTimeout = setTimeout(() => { if (!this.peerConnected) { onlineRoom.leave(); this.scene.start('MainMenuScene'); } }, graceMs);
     }) : null;
     this.peerReconnectUnsubscribe = this.online ? onlineRoom.on('room:peer-reconnected', () => {
       this.peerConnected = true; clearTimeout(this.peerTimeout); this.statusText?.setAlpha(0);
     }) : null;
     this.rematchUnsubscribe = this.online ? onlineRoom.on('room:rematch', () => {
       document.getElementById('results-panel').hidden = true;
+      const retryBtn = document.getElementById('results-retry');
+      if (retryBtn) { retryBtn.textContent = 'REMATCH'; retryBtn.disabled = false; }
       this.matchFlow.reset(); this.playerWins = 0; this.cpuWins = 0; this.roundNumber = 1; this.restartRound();
     }) : null;
     this.fighters = [this.player, this.cpu];
@@ -102,6 +105,8 @@ export class FightScene extends Phaser.Scene {
       this.input?.keyboard?.off?.('keydown-P', this.handlePauseToggle, this);
       this.three?.destroy(); this.comboBanner?.destroy(); this.nextRoundPrompt?.destroy(); this.trainingPanel?.remove(); this.p2TouchPanel?.remove();
       this.remoteUnsubscribe?.();
+      this.onlineUnsubscribes?.forEach(off => off());
+      this.onlineUnsubscribes = [];
       this.peerDisconnectUnsubscribe?.(); this.peerReconnectUnsubscribe?.(); this.rematchUnsubscribe?.();
       clearTimeout(this.peerTimeout);
       if (this.online) onlineRoom.leave();
@@ -317,10 +322,20 @@ export class FightScene extends Phaser.Scene {
     }
     if (this.online) {
       const input = this.inputController.getState();
-      if (this.time.now - this.lastNetworkSend > 30) {
+      if (this.time.now - this.lastNetworkSend > 25) {
         onlineRoom.sendInput(input, ++this.inputSequence);
         this.lastNetworkSend = this.time.now;
       }
+      for (const fighter of this.fighters) {
+        if (fighter.targetX !== undefined) {
+          const lerpRate = Math.min(1, dt * 22);
+          fighter.x += (fighter.targetX - fighter.x) * lerpRate;
+          fighter.y += (fighter.targetY - fighter.y) * lerpRate;
+          fighter.z = (fighter.z ?? 0) + ((fighter.targetZ ?? 0) - (fighter.z ?? 0)) * lerpRate;
+        }
+      }
+      this.three.setFighters(this.fighters);
+      this.updateBars();
       return;
     }
     this.matchFlow.tick(dt);
@@ -404,33 +419,93 @@ export class FightScene extends Phaser.Scene {
         this.roundLabel.setText(`ROUND ${String(this.roundNumber).padStart(2,'0')}  ·  ${this.playerWins} - ${this.cpuWins}`);
         this.three.setFighters(this.fighters); this.updateBars();
       }),
+      onlineRoom.on('match:hit', data => {
+        const attacker = data.attackerSlot === this.slot ? this.player : this.cpu;
+        const target = data.targetSlot === this.slot ? this.player : this.cpu;
+        this.handleHitFeedback({
+          attacker,
+          target,
+          damage: data.damage,
+          blocked: data.blocked,
+          perfect: data.perfect,
+          combo: data.combo,
+          action: data.action,
+          launcher: data.launcher
+        });
+      }),
       onlineRoom.on('match:round-complete', ({ round, winnerSlot }) => {
         this.roundOver = true;
+        audioManager.playKO();
         const message = winnerSlot === null ? 'ROUND DRAW' : winnerSlot === this.slot ? 'ROUND WON' : 'ROUND LOST';
         this.statusText.setText(message).setAlpha(1);
         this.playerWins = round.wins[this.slot === 0 ? 'player' : 'opponent'];
         this.cpuWins = round.wins[this.slot === 0 ? 'opponent' : 'player'];
         this.roundLabel.setText(`ROUND ${String(round.round).padStart(2,'0')}  ·  ${this.playerWins} - ${this.cpuWins}`);
       }),
-      onlineRoom.on('match:round-start', () => { this.roundOver = false; this.statusText.setAlpha(0); }),
+      onlineRoom.on('match:round-start', ({ round }) => {
+        this.roundOver = false;
+        this.statusText.setAlpha(0);
+        audioManager.playRoundStart();
+        if (round) {
+          this.roundNumber = round.round;
+          this.roundSeconds = round.remaining;
+          this.playerWins = round.wins[this.slot === 0 ? 'player' : 'opponent'];
+          this.cpuWins = round.wins[this.slot === 0 ? 'opponent' : 'player'];
+          this.roundLabel.setText(`ROUND ${String(this.roundNumber).padStart(2,'0')}  ·  ${this.playerWins} - ${this.cpuWins}`);
+        }
+      }),
       onlineRoom.on('match:complete', result => this.showOnlineResult(result))
     ];
   }
 
   applyOnlineFighterState(fighter, state) {
-    fighter.x=state.x; fighter.y=state.y; fighter.facing=state.facing;
-    fighter.health=state.health; fighter.energy=state.energy; fighter.state=state.activeAction || state.state;
-    fighter.blocking=state.blocking; fighter.crouching=state.crouching;
-    fighter.actionTime=state.actionTime; fighter.hitFlash=state.hitFlash;
+    fighter.targetX = state.x;
+    fighter.targetY = state.y;
+    fighter.targetZ = state.z !== undefined ? state.z : 0;
+    if (Math.hypot(fighter.x - state.x, (fighter.z ?? 0) - (state.z ?? 0)) > 2.0) {
+      fighter.x = state.x;
+      fighter.y = state.y;
+      fighter.z = state.z !== undefined ? state.z : 0;
+    }
+    fighter.facing = state.facing;
+    fighter.facingAngle = state.facingAngle !== undefined ? state.facingAngle : (state.facing === 1 ? Math.PI / 2 : -Math.PI / 2);
+    fighter.health = state.health;
+    fighter.energy = state.energy;
+    fighter.state = state.activeAction || state.state;
+    fighter.blocking = state.blocking;
+    fighter.crouching = state.crouching;
+    fighter.actionTime = state.actionTime;
+    fighter.hitFlash = state.hitFlash;
+    fighter.dashTime = state.dashTime ?? 0;
   }
 
   showOnlineResult(result) {
     this.roundOver = true;
     const won = result.winnerSlot === this.slot;
-    document.getElementById('results-title').textContent = won ? 'VICTORY' : 'DEFEAT';
-    document.getElementById('results-subtitle').textContent = 'Match result confirmed by the room server. Online account rewards are not enabled.';
-    document.getElementById('results-score').textContent = `${result.wins[this.slot === 0 ? 'player' : 'opponent']} — ${result.wins[this.slot === 0 ? 'opponent' : 'player']}`;
-    document.getElementById('results-panel').hidden = false;
+    if (won) {
+      audioManager.playVictory();
+      audioManager.startBGM('victory');
+    } else {
+      audioManager.stopBGM();
+    }
+    const title = document.getElementById('results-title');
+    const subtitle = document.getElementById('results-subtitle');
+    const score = document.getElementById('results-score');
+    if (title) title.textContent = won ? 'VICTORY' : 'DEFEAT';
+    if (subtitle) subtitle.textContent = 'Match result confirmed by the authoritative room server.';
+    if (score) score.textContent = `${result.wins[this.slot === 0 ? 'player' : 'opponent']} — ${result.wins[this.slot === 0 ? 'opponent' : 'player']}`;
+    const retryBtn = document.getElementById('results-retry');
+    if (retryBtn) {
+      retryBtn.textContent = 'REMATCH';
+      retryBtn.disabled = false;
+      retryBtn.onclick = () => {
+        retryBtn.textContent = 'VOTED REMATCH · WAITING';
+        retryBtn.disabled = true;
+        onlineRoom.voteRematch();
+      };
+    }
+    const panel = document.getElementById('results-panel');
+    if (panel) panel.hidden = false;
   }
 
   handleSecondPlayerActions(input) {
