@@ -19,12 +19,13 @@ export class ArcadeProgression {
     if (this.status !== 'active') return null;
     const fighterId = this.opponents[this.index];
     const boss = this.index === this.opponents.length - 1;
+    const startIndex = Math.max(0, STAGE_IDS.indexOf(this.stageId));
     return {
       index: this.index,
       total: this.opponents.length,
       fighterId,
       difficulty: DIFFICULTY[Math.min(2, Math.floor(this.index / Math.max(1, Math.ceil(this.opponents.length / 3))))],
-      stageId: STAGE_IDS[this.index % STAGE_IDS.length],
+      stageId: STAGE_IDS[(startIndex + this.index) % STAGE_IDS.length],
       boss,
       label: boss ? 'FINAL BOSS' : `FIGHT ${this.index + 1} / ${this.opponents.length}`
     };

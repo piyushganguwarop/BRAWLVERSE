@@ -1,8 +1,8 @@
 # BRAWLVERSE - Test & Browser Validation Results Register
 
-**Document Version:** 1.8.0  
-**Phase Milestone:** BRAWLVERSE UI Redesign & Asset Integration (Milestone 1: Main Menu & Mode Select)  
-**Date of Run:** 2026-11-03  
+**Document Version:** 2.0.0  
+**Phase Milestone:** BRAWLVERSE UI Redesign & Asset Integration (Milestone 2 Review Corrections: Mode Select, Fighter Select, Arena Select & Mobile Landscape)  
+**Date of Run:** 2026-11-04  
 **Platform / OS:** Windows 11  
 **Browser Engine:** Microsoft Edge 156.0.4314.58 (Headless Chromium via CDP)  
 **Status:** ALL TESTS PASSING (100% Green)  
@@ -15,7 +15,8 @@
 - **Total Test Cases:** 177
 - **Passed:** 177 (100%)
 - **Failed:** 0
-- **Duration:** ~670ms
+- **Duration:** ~810ms
+- **Production Build:** `npm run build` succeeds cleanly in 12.4s (Vite production bundle).
 
 ---
 
@@ -25,6 +26,18 @@
 | :--- | :--- | :--- | :--- |
 | **Screen 01: Main Menu** | 1920x1080 (Desktop)<br>1366x768 (Compact)<br>844x390 (Mobile Landscape) | **PASS** | BRAWLVERSE vector logo rendered without clipping; 5 sharp action buttons (`PLAY` primary, `FIGHTERS`, `TRAINING`, `COLLECTION`, `SETTINGS`) with SVG mask icons; live 3D Atlas model rendered with signature Titan Gauntlet and floating cyber energy motes on Electric Cyan glowing pedestal; top section tag `01 MAIN MENU` and quick dossier pills (Level & Coins, zero emojis); unnecessary scrollbars removed. |
 | **Screen 02: Mode Select** | 1920x1080 (Desktop) | **PASS** | Triggered upon clicking `PLAY`; displays `02 MODE SELECT` header, `SELECT GAME MODE` heading, and 4 color-coded mode cards (`ARCADE` in Electric Cyan, `LOCAL VERSUS` in Hot Magenta, `TRAINING` in Electric Violet, `ONLINE` in Radiant Gold) with glowing vector SVG icons; `BACK` button returns smoothly to Main Menu. |
+
+---
+
+## 1.2 BRAWLVERSE UI Redesign Milestone 2 Review & Required Corrections Validation
+
+| Issue Area | Required Correction | Automated & In-Browser Verification Result | Status |
+| :--- | :--- | :--- | :--- |
+| **1. Mode Select (1920x1080)** | Remove visible browser vertical scrollbar at 1920×1080. Confirm no content causes page overflow. | Removed `.menu-shell { overflow-y: auto }` and padding on `#menu-shell`. In-browser CDP assertion verified: `windowHeight: 1080, docScrollHeight: 1080, shellClientHeight: 1080, shellScrollHeight: 1080, hasDocScrollbar: false, hasShellScrollbar: false`. Zero scrollbars visible. | **PASS** |
+| **2. Fighter Select (Screen 03)** | Fix capture sequence where `m2_05` displayed Rook instead of Myst. Confirm selected fighter name, roster highlight, and 3D preview match before capturing. Improve preview scale. | Initialized progression with all roster champions unlocked. Programmatically asserted `selectedIndex === 3`, `domName === 'MYST'`, `borderVisible === true`, and `currentFighterId === 'myst'` before capturing. Increased 3D preview height to 240px and adjusted `fitDistance` for a prominent 20% scale boost. | **PASS** |
+| **3. Arena Select (Screen 04)** | Fix inconsistent arena screenshots (Temple/Rooftop previously displayed Neon District artwork). Verify selecting Neon, Temple, Rooftop updates name, subtitle, artwork, description, thumbnail, counter, unlock status, and match scene parameter together. | Resolved locked-stage early return in `SelectScene.changeStage()`. Synchronized DOM terminal and Phaser stage labels. Programmatically asserted all 8 attributes on Neon, Temple, and Rooftop before capturing each image. Verified `FightScene` receives correct `stageId` ('neon', 'temple', 'rooftop'). | **PASS** |
+| **4. Mobile Landscape (844x390)** | Title must not clip at top; all fighter cards readable and selectable; arena controls accessible; Start button visible; no hiding important info; usable touch targets. | Fixed card and header coordinates: Title at Y=14, Subtitle at Y=28 (zero top clipping). Roster laid out cleanly across width with 88x92px touch cards (> 44px touch ergonomics). Dedicated fighter summary bar at Y=168. Stage controls with `<` `>` touch buttons at Y=224. CPU difficulty at Y=266. Start button at Y=358 (`height - 32`). Zero overlap or clipping. | **PASS** |
+| **5. Screenshot Validation** | Re-run browser capture after fixing issues: Mode Select (1920x1080), Fighter Select (Atlas, Volt, Rook, Myst at 1920x1080), Arena Select (Neon, Temple, Rooftop at 1920x1080), Compact Desktop (1366x768), Mobile Landscape (844x390). | All 10 screenshots captured via Edge Headless CDP with pre-capture state assertions in `scripts/capture-milestone2.js`. Saved to `docs/audit_screenshots/` and persistent artifact directory. | **PASS** |
 
 ### Suite Breakdown
 

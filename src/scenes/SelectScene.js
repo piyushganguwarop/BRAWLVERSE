@@ -562,13 +562,20 @@ export class SelectScene extends Phaser.Scene {
   changeStage(direction) {
     const next = (this.stageIndex + direction + this.stages.length) % this.stages.length;
     const stage = this.stages[next];
-    if (!isStageUnlocked(stage.id)) {
+    this.stageIndex = next;
+    const unlocked = isStageUnlocked(stage.id);
+    if (!unlocked) {
       const result = purchaseStage(stage.id);
       this.progression = progressionSnapshot();
-      if (!result.ok) { this.subtitle.setText(`${stage.name}: ${result.reason}  ·  ${this.progression.coins} COINS`); return; }
-      this.subtitle.setText(`${stage.name} UNLOCKED  ·  ${this.progression.coins} COINS`);
+      if (result.ok) {
+        this.subtitle.setText(`${stage.name} UNLOCKED  ·  ${this.progression.coins} COINS`);
+      } else {
+        this.subtitle.setText(`${stage.name}: ${result.reason}  ·  ${this.progression.coins} COINS`);
+      }
+    } else {
+      const modeName = this.mode === 'training' ? 'TRAINING LAB' : this.mode === 'local' ? 'LOCAL VERSUS' : this.mode === 'online' ? 'ONLINE PVP' : 'ARCADE GAUNTLET';
+      this.subtitle.setText(`${modeName}  ·  LEVEL ${this.progression.level}  ·  ${this.progression.coins} COINS`);
     }
-    this.stageIndex = next;
     this.updateStageLabel();
   }
 
@@ -602,17 +609,21 @@ export class SelectScene extends Phaser.Scene {
     const sidePreviewsActive = showSidePreviews && !isMobileShort;
     if (this.selectionPreviewHost) this.selectionPreviewHost.hidden = !sidePreviewsActive;
     if (this.stagePreviewHost) this.stagePreviewHost.hidden = !sidePreviewsActive;
-    this.title.setPosition(width / 2, isMobileShort ? 18 : (compact ? 26 : 38)).setFontSize(isMobileShort ? '16px' : (compact ? '20px' : '28px'));
-    this.subtitle.setPosition(width / 2, isMobileShort ? 36 : (compact ? 48 : 68)).setFontSize(isMobileShort ? '9px' : (compact ? '10px' : '13px'));
-    const columns = 4;
+
+    this.title.setPosition(width / 2, isMobileShort ? 14 : (compact ? 26 : 38))
+      .setFontSize(isMobileShort ? '15px' : (compact ? '20px' : '28px'));
+    this.subtitle.setPosition(width / 2, isMobileShort ? 28 : (compact ? 48 : 68))
+      .setFontSize(isMobileShort ? '10px' : (compact ? '10px' : '13px'));
+
+    const columns = isMobileShort ? 8 : 4;
     const rows = Math.ceil(roster.length / columns);
-    const gap = isMobileShort ? 4 : (compact ? 6 : 14);
-    const toolbarHeight = isMobileShort ? 120 : (this.localVersus ? 236 : 200);
+    const gap = isMobileShort ? 8 : (compact ? 6 : 14);
+    const toolbarHeight = isMobileShort ? 160 : (this.localVersus ? 236 : 200);
     const toolbarTop = height - toolbarHeight;
-    const startY = isMobileShort ? 58 : (compact ? 70 : 180);
-    const cardAreaBottom = isMobileShort ? height - 120 : (toolbarTop - (desktopSplit ? 18 : 104));
-    const cardH = isMobileShort ? Math.max(48, Math.min(68, (cardAreaBottom - startY - gap) / rows)) : Math.max(56, Math.min(compact ? 150 : 190, (cardAreaBottom - startY - gap) / rows));
-    const cardW = isMobileShort ? Math.max(50, Math.min(94, (width - 40 - (columns - 1) * gap) / columns)) : Math.max(55, Math.min(compact ? 118 : 150, (width - (desktopSplit ? 48 : 28) - (columns - 1) * gap) / columns));
+    const startY = isMobileShort ? 90 : (compact ? 70 : 180);
+    const cardAreaBottom = isMobileShort ? 136 : (toolbarTop - (desktopSplit ? 18 : 104));
+    const cardH = isMobileShort ? 92 : Math.max(56, Math.min(compact ? 150 : 190, (cardAreaBottom - startY - gap) / rows));
+    const cardW = isMobileShort ? Math.max(72, Math.min(92, Math.floor((width - 48 - (columns - 1) * gap) / columns))) : Math.max(55, Math.min(compact ? 118 : 150, (width - (desktopSplit ? 48 : 28) - (columns - 1) * gap) / columns));
     const totalW = columns * cardW + (columns - 1) * gap;
     const contentLeft = (width - totalW) / 2;
     const startX = contentLeft + cardW / 2;
@@ -621,27 +632,34 @@ export class SelectScene extends Phaser.Scene {
       card.setPosition(startX + col * (cardW + gap), startY + row * (cardH + gap));
       card.setScale(cardW / 150, cardH / 190);
     });
-    const cardsBottom = startY + rows * (cardH + gap) - gap;
-    const infoWidth = desktopSplit ? 300 : Math.max(250, width - 32);
-    const infoHeight = desktopSplit ? Math.min(220, Math.max(160, toolbarTop - startY - 20)) : Math.min(82, Math.max(64, toolbarTop - cardsBottom - 10));
-    const infoX = desktopSplit ? contentLeft + totalW + 24 + infoWidth / 2 : width / 2;
-    const infoY = desktopSplit ? startY + Math.min(112, (toolbarTop - startY) / 2) : cardsBottom + infoHeight / 2 + 6;
+    const cardsBottom = isMobileShort ? (startY + cardH / 2) : (startY + rows * (cardH + gap) - gap);
+
+    const infoWidth = isMobileShort ? Math.min(width - 32, 620) : (desktopSplit ? 300 : Math.max(250, width - 32));
+    const infoHeight = isMobileShort ? 44 : (desktopSplit ? Math.min(220, Math.max(160, toolbarTop - startY - 20)) : Math.min(82, Math.max(64, toolbarTop - cardsBottom - 10)));
+    const infoX = isMobileShort ? (width / 2) : (desktopSplit ? contentLeft + totalW + 24 + infoWidth / 2 : width / 2);
+    const infoY = isMobileShort ? 168 : (desktopSplit ? startY + Math.min(112, (toolbarTop - startY) / 2) : cardsBottom + infoHeight / 2 + 6);
     this.infoBg.setSize(infoWidth, infoHeight);
-    if (desktopSplit) {
-      this.infoName.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 16);
-      this.infoTitle.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 48);
-      this.infoBio.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 72).setWordWrapWidth(infoWidth - 32);
-      this.specialLabel.setPosition(-infoWidth / 2 + 16, infoHeight / 2 - 34);
+
+    if (isMobileShort) {
+      this.infoName.setPosition(-infoWidth / 2 + 14, -7).setFontSize('13px').setOrigin(0, 0.5);
+      this.infoTitle.setPosition(-infoWidth / 2 + 14, 9).setFontSize('8px').setOrigin(0, 0.5);
+      this.specialLabel.setPosition(infoWidth / 2 - 14, -7).setFontSize('9px').setOrigin(1, 0.5);
+      this.infoBio.setPosition(infoWidth / 2 - 14, 9).setFontSize('8px').setOrigin(1, 0.5).setWordWrapWidth(infoWidth / 2).setMaxLines(1);
+    } else if (desktopSplit) {
+      this.infoName.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 16).setOrigin(0, 0);
+      this.infoTitle.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 48).setOrigin(0, 0);
+      this.infoBio.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 72).setWordWrapWidth(infoWidth - 32).setOrigin(0, 0);
+      this.specialLabel.setPosition(-infoWidth / 2 + 16, infoHeight / 2 - 34).setOrigin(0, 0);
     } else {
-      this.infoName.setPosition(-infoWidth / 2 + 10, -infoHeight / 2 + 8).setFontSize(narrow ? '16px' : '18px');
-      this.infoTitle.setPosition(-infoWidth / 2 + 10, -infoHeight / 2 + 30).setFontSize('8px');
-      this.infoBio.setPosition(-infoWidth / 2 + 10, -infoHeight / 2 + 46).setFontSize('9px').setWordWrapWidth(infoWidth - 20).setMaxLines(1);
+      this.infoName.setPosition(-infoWidth / 2 + 10, -infoHeight / 2 + 8).setFontSize(narrow ? '16px' : '18px').setOrigin(0, 0);
+      this.infoTitle.setPosition(-infoWidth / 2 + 10, -infoHeight / 2 + 30).setFontSize('8px').setOrigin(0, 0);
+      this.infoBio.setPosition(-infoWidth / 2 + 10, -infoHeight / 2 + 46).setFontSize('9px').setWordWrapWidth(infoWidth - 20).setMaxLines(1).setOrigin(0, 0);
       this.specialLabel.setPosition(infoWidth / 2 - 10, -infoHeight / 2 + 10).setOrigin(1, 0).setFontSize('8px');
     }
     this.infoPanel.setPosition(infoX, infoY).setScale(1);
-    this.infoPanel.setVisible(!sidePreviewsActive && !isMobileShort && infoHeight >= 60);
+    this.infoPanel.setVisible(isMobileShort || (!sidePreviewsActive && infoHeight >= 60));
 
-    const stageY = isMobileShort ? cardsBottom + 22 : toolbarTop + 18;
+    const stageY = isMobileShort ? 224 : toolbarTop + 18;
     if (this.selectionPreviewHost) {
       if (width >= 1500) {
         this.selectionPreviewHost.style.right = '32px';
@@ -667,25 +685,24 @@ export class SelectScene extends Phaser.Scene {
       }
     }
 
-    this.stageLabel.setPosition(width / 2, stageY).setVisible(!sidePreviewsActive);
-    this.stageDesc.setPosition(width / 2, stageY + 16).setVisible(!sidePreviewsActive && !isMobileShort);
-    this.stagePrev.setPosition(width / 2 - (compact ? 120 : 165), stageY + 4).setScale(compact ? 0.7 : 1).setVisible(!sidePreviewsActive);
-    this.stageNext.setPosition(width / 2 + (compact ? 120 : 165), stageY + 4).setScale(compact ? 0.7 : 1).setVisible(!sidePreviewsActive);
+    this.stageLabel.setPosition(width / 2, stageY).setFontSize(isMobileShort ? '13px' : '15px').setVisible(isMobileShort || !sidePreviewsActive);
+    this.stageDesc.setPosition(width / 2, stageY + 16).setFontSize(isMobileShort ? '9px' : '11px').setVisible(isMobileShort || (!sidePreviewsActive && !isMobileShort));
+    this.stagePrev.setPosition(width / 2 - (isMobileShort ? 145 : (compact ? 120 : 165)), stageY + (isMobileShort ? 0 : 4)).setScale(isMobileShort ? 0.8 : (compact ? 0.7 : 1)).setVisible(isMobileShort || !sidePreviewsActive);
+    this.stageNext.setPosition(width / 2 + (isMobileShort ? 145 : (compact ? 120 : 165)), stageY + (isMobileShort ? 0 : 4)).setScale(isMobileShort ? 0.8 : (compact ? 0.7 : 1)).setVisible(isMobileShort || !sidePreviewsActive);
 
     const isCpuMode = !this.localVersus && this.mode !== 'online';
     this.difficultyLabel?.setVisible(isCpuMode && !isMobileShort);
     this.difficultyButtons?.forEach(button => button.setVisible(isCpuMode));
     if (isCpuMode) {
-      const diffY = sidePreviewsActive ? cardsBottom + 35 : (isMobileShort ? stageY + 28 : stageY + 38);
+      const diffY = isMobileShort ? 266 : (sidePreviewsActive ? cardsBottom + 35 : stageY + 38);
       this.difficultyLabel?.setPosition(width / 2, diffY);
-      this.difficultyButtons?.forEach((button, i) => button.setPosition(width / 2 + (i - 1) * (isMobileShort ? 72 : 90), isMobileShort ? diffY : diffY + 24).setScale(isMobileShort ? 0.78 : 1));
+      this.difficultyButtons?.forEach((button, i) => button.setPosition(width / 2 + (i - 1) * (isMobileShort ? 78 : 90), isMobileShort ? diffY : diffY + 24).setScale(isMobileShort ? 0.76 : 1));
     }
 
     this.startButton.setPosition(width / 2, height - 32).setScale(compact ? 0.75 : 0.95);
-    this.onlineButton?.setPosition(width - (compact ? 80 : 112), isMobileShort ? 20 : (compact ? 28 : 42)).setScale(compact ? 0.72 : 1);
-    this.menuBackButton?.setPosition(compact ? 46 : 62, isMobileShort ? 20 : (compact ? 28 : 42)).setScale(compact ? 0.72 : 1);
-    this.creatorButton?.setPosition(compact ? (width / 2) : 145, isMobileShort ? (height - 32) : (compact ? 75 : 42)).setScale(compact ? 0.72 : 1);
-    if (isMobileShort) this.creatorButton?.setPosition(110, 20);
+    this.onlineButton?.setPosition(width - (compact ? 80 : 112), isMobileShort ? 18 : (compact ? 28 : 42)).setScale(compact ? 0.72 : 1);
+    this.menuBackButton?.setPosition(compact ? 46 : 62, isMobileShort ? 18 : (compact ? 28 : 42)).setScale(compact ? 0.72 : 1);
+    this.creatorButton?.setPosition(isMobileShort ? 112 : (compact ? (width / 2) : 145), isMobileShort ? 18 : (compact ? 75 : 42)).setScale(compact ? 0.72 : 1);
     this.hint.setPosition(width / 2, height - 68).setVisible(!compact && !isMobileShort);
 
     if (this.localVersus && this.p2Title) {

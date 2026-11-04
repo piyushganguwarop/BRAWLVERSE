@@ -155,7 +155,7 @@ export class CustomizerPreview {
     const aspect = Math.max(this.camera.aspect || 1, 0.35);
     const verticalFov = THREE.MathUtils.degToRad(this.camera.fov);
     const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect);
-    const fitDistance = Math.max(size.y / (2 * Math.tan(verticalFov / 2)), size.x / (2 * Math.tan(horizontalFov / 2))) * 1.2;
+    const fitDistance = Math.max(size.y / (2 * Math.tan(verticalFov / 2)), size.x / (2 * Math.tan(horizontalFov / 2))) * 1.05;
     const distance = Math.max(3.5, fitDistance * (this.zoom / 6.8));
     this.camera.position.set(center.x, center.y, center.z + distance);
     this.camera.lookAt(center);

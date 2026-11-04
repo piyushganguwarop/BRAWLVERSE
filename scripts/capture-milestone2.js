@@ -192,6 +192,22 @@ async function run() {
       } catch {}
     }
 
+    // Seed progression so all fighters (Atlas, Volt, Rook, Myst) and arenas (Neon, Temple, Rooftop) are fully unlocked
+    console.log('[Progression] Seeding unlocked roster and arenas in test session...');
+    await cdp.eval(`
+      (() => {
+        const fullProgression = {
+          level: 10,
+          xp: 25000,
+          coins: 50000,
+          unlockedFighters: ['atlas', 'volt', 'rook', 'myst'],
+          unlockedStages: ['neon', 'temple', 'rooftop'],
+          stats: { wins: 30, losses: 5, winStreak: 5, bestStreak: 12, perfects: 4, arcadeClears: 3 }
+        };
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(fullProgression));
+      })()
+    `);
+
     await new Promise(r => setTimeout(r, 1200));
 
     // 1. Mode Select Screen (Desktop 1920x1080)
@@ -202,7 +218,28 @@ async function run() {
         if (playBtn) playBtn.click();
       })()
     `);
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 800));
+
+    // Assert zero vertical scrollbar on Mode Select at 1920x1080
+    const modeScrollCheck = await cdp.eval(`
+      (() => {
+        const shell = document.getElementById('menu-shell');
+        const doc = document.documentElement;
+        return {
+          windowHeight: window.innerHeight,
+          docScrollHeight: doc.scrollHeight,
+          shellClientHeight: shell ? shell.clientHeight : 0,
+          shellScrollHeight: shell ? shell.scrollHeight : 0,
+          hasDocScrollbar: doc.scrollHeight > window.innerHeight,
+          hasShellScrollbar: shell ? shell.scrollHeight > shell.clientHeight : false
+        };
+      })()
+    `);
+    console.log('[Mode Select Scrollbar Verification]', JSON.stringify(modeScrollCheck));
+    if (modeScrollCheck.hasDocScrollbar || modeScrollCheck.hasShellScrollbar) {
+      throw new Error(`Visible scrollbar detected on Mode Select! docScroll: ${modeScrollCheck.docScrollHeight}, winHeight: ${modeScrollCheck.windowHeight}, shellScroll: ${modeScrollCheck.shellScrollHeight}, shellClient: ${modeScrollCheck.shellClientHeight}`);
+    }
+
     console.log('Capturing: m2_01_mode_select_1920x1080.png');
     await cdp.screenshot('m2_01_mode_select_1920x1080.png');
 
@@ -214,9 +251,62 @@ async function run() {
         if (arcadeBtn) arcadeBtn.click();
       })()
     `);
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1200));
+
+    // Refresh SelectScene progression from localStorage to ensure Myst and all stages are marked unlocked
+    await cdp.eval(`
+      (() => {
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        if (select) {
+          const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+          select.progression = snap;
+          select.cardObjects?.forEach((card) => {
+            card.setData('locked', false);
+            card.getData('lockLabel')?.setText('');
+          });
+          select.select(0);
+        }
+      })()
+    `);
+    await new Promise(r => setTimeout(r, 500));
+
+    // Helper function to assert fighter selection state
+    async function assertFighterState(expectedIndex, expectedId, expectedName) {
+      const state = await cdp.eval(`
+        (() => {
+          const select = window.__brawlGame.scene.getScene('SelectScene');
+          if (!select) return null;
+          const domName = document.getElementById('selection-preview-name')?.textContent?.trim();
+          const domArchetype = document.getElementById('selection-preview-archetype')?.textContent?.trim();
+          const borderVisible = select.cardObjects[${expectedIndex}]?.getData('selectedBorder')?.visible;
+          const currentFighterId = select.selectionPreview?.currentFighterId;
+          return {
+            selectedIndex: select.selectedIndex,
+            domName,
+            domArchetype,
+            borderVisible,
+            currentFighterId
+          };
+        })()
+      `);
+      console.log(`[Fighter Assert #${expectedIndex} ${expectedName}]`, JSON.stringify(state));
+      if (!state) throw new Error('SelectScene not found');
+      if (state.selectedIndex !== expectedIndex) {
+        throw new Error(`selectedIndex mismatch: expected ${expectedIndex}, got ${state.selectedIndex}`);
+      }
+      if (state.domName !== expectedName) {
+        throw new Error(`domName mismatch: expected '${expectedName}', got '${state.domName}'`);
+      }
+      if (!state.borderVisible) {
+        throw new Error(`Card border highlight not visible for fighter ${expectedName}`);
+      }
+      if (state.currentFighterId !== expectedId) {
+        throw new Error(`3D preview fighterId mismatch: expected '${expectedId}', got '${state.currentFighterId}'`);
+      }
+    }
 
     // 3. Fighter Select: Atlas (Default selection index 0)
+    await assertFighterState(0, 'atlas', 'ATLAS');
     console.log('Capturing: m2_02_fighter_select_atlas_1920x1080.png');
     await cdp.screenshot('m2_02_fighter_select_atlas_1920x1080.png');
 
@@ -229,6 +319,7 @@ async function run() {
       })()
     `);
     await new Promise(r => setTimeout(r, 800));
+    await assertFighterState(1, 'volt', 'VOLT');
     console.log('Capturing: m2_03_fighter_select_volt_1920x1080.png');
     await cdp.screenshot('m2_03_fighter_select_volt_1920x1080.png');
 
@@ -241,6 +332,7 @@ async function run() {
       })()
     `);
     await new Promise(r => setTimeout(r, 800));
+    await assertFighterState(2, 'rook', 'ROOK');
     console.log('Capturing: m2_04_fighter_select_rook_1920x1080.png');
     await cdp.screenshot('m2_04_fighter_select_rook_1920x1080.png');
 
@@ -253,8 +345,52 @@ async function run() {
       })()
     `);
     await new Promise(r => setTimeout(r, 800));
+    await assertFighterState(3, 'myst', 'MYST');
     console.log('Capturing: m2_05_fighter_select_myst_1920x1080.png');
     await cdp.screenshot('m2_05_fighter_select_myst_1920x1080.png');
+
+    // Helper function to assert arena selection state
+    async function assertStageState(expectedIndex, expectedId, expectedName, expectedSub) {
+      const state = await cdp.eval(`
+        (() => {
+          const select = window.__brawlGame.scene.getScene('SelectScene');
+          if (!select) return null;
+          const domName = document.getElementById('stage-preview-name')?.textContent?.trim();
+          const domSub = document.getElementById('stage-preview-sub')?.textContent?.trim();
+          const domCounter = document.getElementById('stage-counter')?.textContent?.trim();
+          const lockEl = document.getElementById('stage-preview-lock');
+          const isLockHidden = lockEl ? lockEl.hidden : true;
+          const thumbs = Array.from(document.querySelectorAll('#stage-thumbnails .stage-thumb'));
+          const activeThumbIdx = thumbs.findIndex(t => t.classList.contains('active'));
+          return {
+            stageIndex: select.stageIndex,
+            stageId: select.stages[select.stageIndex]?.id,
+            domName,
+            domSub,
+            domCounter,
+            isLockHidden,
+            activeThumbIdx
+          };
+        })()
+      `);
+      console.log(`[Stage Assert #${expectedIndex} ${expectedName}]`, JSON.stringify(state));
+      if (!state) throw new Error('SelectScene not found');
+      if (state.stageIndex !== expectedIndex) {
+        throw new Error(`stageIndex mismatch: expected ${expectedIndex}, got ${state.stageIndex}`);
+      }
+      if (state.stageId !== expectedId) {
+        throw new Error(`stageId mismatch: expected '${expectedId}', got '${state.stageId}'`);
+      }
+      if (state.domName !== expectedName) {
+        throw new Error(`domName mismatch: expected '${expectedName}', got '${state.domName}'`);
+      }
+      if (state.domSub !== expectedSub) {
+        throw new Error(`domSub mismatch: expected '${expectedSub}', got '${state.domSub}'`);
+      }
+      if (state.activeThumbIdx !== expectedIndex) {
+        throw new Error(`Active thumbnail mismatch: expected ${expectedIndex}, got ${state.activeThumbIdx}`);
+      }
+    }
 
     // 7. Cycle to Neon District
     console.log('Setting stage to Neon District...');
@@ -265,6 +401,7 @@ async function run() {
       })()
     `);
     await new Promise(r => setTimeout(r, 600));
+    await assertStageState(0, 'neon', 'NEON DISTRICT', 'NEO-TOKYO UNDERGROUND');
     console.log('Capturing: m2_06_arena_select_neon_1920x1080.png');
     await cdp.screenshot('m2_06_arena_select_neon_1920x1080.png');
 
@@ -277,6 +414,7 @@ async function run() {
       })()
     `);
     await new Promise(r => setTimeout(r, 600));
+    await assertStageState(1, 'temple', 'ANCIENT TEMPLE', 'SACRED LANTERN SANCTUARY');
     console.log('Capturing: m2_07_arena_select_temple_1920x1080.png');
     await cdp.screenshot('m2_07_arena_select_temple_1920x1080.png');
 
@@ -289,8 +427,24 @@ async function run() {
       })()
     `);
     await new Promise(r => setTimeout(r, 600));
+    await assertStageState(2, 'rooftop', 'CITY ROOFTOP', 'MIDNIGHT SKYLINE HELIPAD');
     console.log('Capturing: m2_08_arena_select_rooftop_1920x1080.png');
     await cdp.screenshot('m2_08_arena_select_rooftop_1920x1080.png');
+
+    // Verify stage passed to match scene
+    const stagePassVerify = await cdp.eval(`
+      (() => {
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        const player = select.selectedIndex;
+        const stage = select.stages[select.stageIndex].id;
+        return {
+          currentStageIndex: select.stageIndex,
+          currentStageId: stage,
+          rooftopMatches: stage === 'rooftop'
+        };
+      })()
+    `);
+    console.log('[Match Stage Parameter Verification]', JSON.stringify(stagePassVerify));
 
     // 10. 1366x768 Compact Desktop
     console.log('Testing 1366x768 viewport...');
@@ -298,10 +452,13 @@ async function run() {
     await cdp.eval(`
       (() => {
         const select = window.__brawlGame.scene.getScene('SelectScene');
-        if (select) select.layout({ width: 1366, height: 768 });
+        if (select) {
+          select.scale.resize(1366, 768);
+          select.layout({ width: 1366, height: 768 });
+        }
       })()
     `);
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 800));
     console.log('Capturing: m2_09_fighter_select_1366x768.png');
     await cdp.screenshot('m2_09_fighter_select_1366x768.png');
 
@@ -311,16 +468,57 @@ async function run() {
     await cdp.eval(`
       (() => {
         const select = window.__brawlGame.scene.getScene('SelectScene');
-        if (select) select.layout({ width: 844, height: 390 });
+        if (select) {
+          select.scale.resize(844, 390);
+          select.layout({ width: 844, height: 390 });
+        }
       })()
     `);
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 800));
+
+    // Mobile layout integrity assertions
+    const mobileLayoutCheck = await cdp.eval(`
+      (() => {
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        if (!select) return null;
+        const titleY = select.title.y;
+        const titleVisible = select.title.visible;
+        const cards = select.cardObjects.map(c => ({
+          x: c.x,
+          y: c.y,
+          visible: c.visible
+        }));
+        const startY = select.startButton.y;
+        const startVisible = select.startButton.visible;
+        const infoVisible = select.infoPanel.visible;
+        const stagePrevVisible = select.stagePrev.visible;
+        const stageNextVisible = select.stageNext.visible;
+        return {
+          titleY,
+          titleVisible,
+          titleNotClipping: titleY >= 10,
+          cardCount: cards.length,
+          allCardsVisible: cards.every(c => c.visible),
+          infoVisible,
+          stageControlsVisible: stagePrevVisible && stageNextVisible,
+          startY,
+          startVisible,
+          startOnScreen: startY <= 380 && startY >= 320
+        };
+      })()
+    `);
+    console.log('[Mobile 844x390 Layout Verification]', JSON.stringify(mobileLayoutCheck));
+    if (!mobileLayoutCheck.titleNotClipping || !mobileLayoutCheck.allCardsVisible || !mobileLayoutCheck.startOnScreen) {
+      throw new Error(`Mobile 844x390 layout check failed: ${JSON.stringify(mobileLayoutCheck)}`);
+    }
+
     console.log('Capturing: m2_10_fighter_select_mobile_844x390.png');
     await cdp.screenshot('m2_10_fighter_select_mobile_844x390.png');
 
     console.log('=== MILESTONE 2 SCREENSHOT CAPTURE COMPLETE ===');
   } catch (err) {
     console.error('[Error during capture]', err);
+    throw err;
   } finally {
     cdp.close();
     edgeProcess.kill();
@@ -332,3 +530,4 @@ async function run() {
 }
 
 run();
+

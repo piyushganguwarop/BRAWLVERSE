@@ -78,6 +78,12 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
   color: var(--bv-text);
   overflow: hidden;
 }
+#menu-shell {
+  overflow: hidden !important;
+  height: 100dvh;
+  max-height: 100dvh;
+  padding: 0 !important;
+}
 .sub-screen {
   overflow-y: auto;
   max-height: calc(100dvh - 80px);
@@ -86,18 +92,23 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
 
 .bv-frame {
   width: min(1440px, 100%);
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
+  max-height: 100dvh;
   margin: 0 auto;
-  padding: 18px 36px;
+  padding: clamp(12px, 2vh, 18px) clamp(16px, 3vw, 36px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .bv-screen-main {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Vector Icon System (SVG mask based with currentColor) */
@@ -384,6 +395,8 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .bv-back-btn {
@@ -410,18 +423,18 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
 
 .bv-modes-container {
   max-width: 960px;
-  margin: 30px auto;
+  margin: clamp(10px, 3vh, 26px) auto 0;
   width: 100%;
   text-align: center;
 }
 
 .bv-screen-title {
   font-family: var(--bv-display);
-  font-size: clamp(26px, 4vw, 38px);
+  font-size: clamp(24px, 3.5vw, 36px);
   font-weight: 800;
   letter-spacing: 2px;
   color: var(--bv-text);
-  margin-bottom: 36px;
+  margin-bottom: clamp(16px, 2.8vh, 32px);
 }
 
 .bv-modes-grid {
@@ -624,8 +637,8 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
 #selection-preview {
   position: absolute;
   z-index: 4;
-  width: 320px;
-  max-width: 25vw;
+  width: 340px;
+  max-width: 26vw;
   padding: 16px 18px;
   background: linear-gradient(155deg, rgba(16, 27, 44, 0.96), rgba(7, 13, 23, 0.98));
   border: 1px solid rgba(18, 221, 235, 0.45);
@@ -694,7 +707,7 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
 .selection-preview-archetype[data-style="technical"] { color: #9b67ff; }
 
 .selection-preview-canvas {
-  height: 200px;
+  height: 240px;
   margin: 6px 0 10px;
   border: 1px solid rgba(18, 221, 235, 0.25);
   background: radial-gradient(ellipse at 50% 50%, #162438, #070d17 80%);
@@ -978,17 +991,17 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
 }
 
 @media (max-width: 1499px) {
-  #selection-preview { width: 270px; padding: 12px 14px; }
-  #stage-preview { width: 250px; padding: 12px 14px; }
-  .selection-preview-canvas { height: 160px; }
-  .stage-preview-art { height: 110px; }
+  #selection-preview { width: 285px; padding: 12px 14px; }
+  #stage-preview { width: 260px; padding: 12px 14px; }
+  .selection-preview-canvas { height: 180px; }
+  .stage-preview-art { height: 115px; }
 }
 
 @media (max-width: 1199px) {
-  #selection-preview { width: 240px; padding: 10px 12px; }
-  #stage-preview { width: 220px; padding: 10px 12px; }
-  .selection-preview-canvas { height: 140px; }
-  .stage-preview-art { height: 95px; }
+  #selection-preview { width: 250px; padding: 10px 12px; }
+  #stage-preview { width: 230px; padding: 10px 12px; }
+  .selection-preview-canvas { height: 155px; }
+  .stage-preview-art { height: 100px; }
 }
 
 @media (max-width: 979px) {
@@ -1013,11 +1026,21 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
 button, input, select { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid #f2c46b; outline-offset: 3px; }
-.menu-shell, .modal-shell, .online-panel, .creator-panel {
+.modal-shell, .online-panel, .creator-panel {
   padding-top: max(14px, env(safe-area-inset-top));
   padding-bottom: max(14px, env(safe-area-inset-bottom));
 }
-.menu-shell { overflow-y: auto; overscroll-behavior: contain; }
+.menu-shell:not(:has(.bv-frame)) {
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#menu-shell, .menu-shell:has(.bv-frame) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  overflow: hidden !important;
+}
 .menu-frame { min-height: 100dvh; }
 .menu-button, .menu-footer button, .menu-back,
 .online-card button, .creator-actions button, .creator-close,
