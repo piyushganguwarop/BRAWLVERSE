@@ -4,7 +4,7 @@ import { onlineRoom } from '../multiplayer/OnlineRoom.js';
 import { hasCustomFighter, loadCustomFighter, loadSlots, saveCustomFighter, toFighter, defaults, getActiveCustomSlot, setActiveCustomSlot } from '../characters/CustomFighter.js';
 import { CustomizerPreview } from '../characters/CustomizerPreview.js';
 import { ArcadeProgression } from '../modes/ArcadeProgression.js';
-import { loadProgression, isFighterUnlocked, isStageUnlocked, purchaseFighter, purchaseStage, progressionSnapshot } from '../progression/Progression.js';
+import { loadProgression, isFighterUnlocked, isStageUnlocked, purchaseFighter, purchaseStage, progressionSnapshot, STAGE_UNLOCKS } from '../progression/Progression.js';
 import { audioManager } from '../audio/AudioManager.js';
 
 const COLORS = {
@@ -94,6 +94,16 @@ export class SelectScene extends Phaser.Scene {
     this.stageNext = this.add.text(0, 0, '›', { fontFamily: 'Orbitron, sans-serif', fontSize: '24px', color: COLORS.cyan, backgroundColor: '#101d30', padding: { x: 12, y: 3 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     this.stagePrev.on('pointerdown', () => { audioManager.playHover(); this.changeStage(-1); });
     this.stageNext.on('pointerdown', () => { audioManager.playHover(); this.changeStage(1); });
+
+    this.stageUnlockBtn = this.add.text(0, 0, 'UNLOCK ARENA', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '11px',
+      fontStyle: 'bold',
+      color: '#071321',
+      backgroundColor: '#f4c65e',
+      padding: { x: 12, y: 4 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
+    this.stageUnlockBtn.on('pointerdown', () => this.unlockCurrentStage());
 
     // Primary Start Fight Button
     this.startButton = this.add.text(0, 0, this.mode === 'training' ? 'ENTER LAB  ▶' : 'START FIGHT  ▶', {
@@ -424,7 +434,7 @@ export class SelectScene extends Phaser.Scene {
           </button>
         </div>
       </div>
-      <div class="stage-preview-lock" id="stage-preview-lock" hidden></div>
+      <button class="stage-preview-lock" id="stage-preview-lock" type="button" hidden></button>
     `;
     document.getElementById('game-root')?.appendChild(host);
     this.stagePreviewHost = host;
@@ -433,6 +443,8 @@ export class SelectScene extends Phaser.Scene {
     const nextBtn = host.querySelector('#stage-btn-next');
     if (prevBtn) prevBtn.onclick = () => { audioManager.playHover(); this.changeStage(-1); };
     if (nextBtn) nextBtn.onclick = () => { audioManager.playHover(); this.changeStage(1); };
+    const lockBtn = host.querySelector('#stage-preview-lock');
+    if (lockBtn) lockBtn.onclick = () => { audioManager.playSelect(); this.unlockCurrentStage(); };
     host.querySelectorAll('.stage-thumb').forEach(thumb => {
       thumb.onclick = () => {
         const target = Number(thumb.getAttribute('data-stage'));
@@ -505,9 +517,13 @@ export class SelectScene extends Phaser.Scene {
 
     const lockEl = document.getElementById('stage-preview-lock');
     if (lockEl) {
-      const unlocked = isStageUnlocked(this.stages[this.stageIndex].id);
+      const currentStage = this.stages[this.stageIndex];
+      const unlocked = isStageUnlocked(currentStage.id);
       lockEl.hidden = unlocked;
-      if (!unlocked) lockEl.textContent = '🔒 LOCKED · CLICK TO UNLOCK';
+      if (!unlocked) {
+        const cost = STAGE_UNLOCKS[currentStage.id] || { level: 1, coins: 0 };
+        lockEl.innerHTML = `🔒 LOCKED · <strong>UNLOCK FOR ${cost.coins} COINS</strong>`;
+      }
     }
 
     this.stagePreviewHost.hidden = this.scale.width < 980;
@@ -561,28 +577,44 @@ export class SelectScene extends Phaser.Scene {
 
   changeStage(direction) {
     const next = (this.stageIndex + direction + this.stages.length) % this.stages.length;
-    const stage = this.stages[next];
     this.stageIndex = next;
+    const stage = this.stages[next];
     const unlocked = isStageUnlocked(stage.id);
+    const modeName = this.mode === 'training' ? 'TRAINING LAB' : this.mode === 'local' ? 'LOCAL VERSUS' : this.mode === 'online' ? 'ONLINE PVP' : 'ARCADE GAUNTLET';
     if (!unlocked) {
-      const result = purchaseStage(stage.id);
-      this.progression = progressionSnapshot();
-      if (result.ok) {
-        this.subtitle.setText(`${stage.name} UNLOCKED  ·  ${this.progression.coins} COINS`);
-      } else {
-        this.subtitle.setText(`${stage.name}: ${result.reason}  ·  ${this.progression.coins} COINS`);
-      }
+      const cost = STAGE_UNLOCKS[stage.id] || { level: 1, coins: 0 };
+      this.subtitle.setText(`${stage.name} (LOCKED · REQ LVL ${cost.level} · ${cost.coins} COINS)  ·  COINS: ${this.progression.coins}`);
     } else {
-      const modeName = this.mode === 'training' ? 'TRAINING LAB' : this.mode === 'local' ? 'LOCAL VERSUS' : this.mode === 'online' ? 'ONLINE PVP' : 'ARCADE GAUNTLET';
       this.subtitle.setText(`${modeName}  ·  LEVEL ${this.progression.level}  ·  ${this.progression.coins} COINS`);
+    }
+    this.updateStageLabel();
+  }
+
+  unlockCurrentStage() {
+    const stage = this.stages[this.stageIndex];
+    if (isStageUnlocked(stage.id)) return;
+    const result = purchaseStage(stage.id);
+    this.progression = progressionSnapshot();
+    if (result.ok) {
+      audioManager.playConfirm();
+      this.subtitle.setText(`${stage.name} UNLOCKED!  ·  ${this.progression.coins} COINS`);
+    } else {
+      audioManager.playCancel();
+      this.subtitle.setText(`CANNOT UNLOCK ${stage.name}: ${result.reason.toUpperCase()}  ·  ${this.progression.coins} COINS`);
     }
     this.updateStageLabel();
   }
 
   updateStageLabel() {
     const stage = this.stages[this.stageIndex];
-    this.stageLabel.setText(`STAGE  /  ${stage.name}${isStageUnlocked(stage.id) ? '' : '  ·  LOCKED'}`);
-    this.stageDesc.setText(stage.desc);
+    const unlocked = isStageUnlocked(stage.id);
+    const cost = STAGE_UNLOCKS[stage.id] || { level: 1, coins: 0 };
+    this.stageLabel.setText(`STAGE  /  ${stage.name}${unlocked ? '' : '  ·  🔒 LOCKED'}`);
+    this.stageDesc.setText(unlocked ? stage.desc : `Requires Level ${cost.level} and ${cost.coins} coins to unlock. Click to unlock.`);
+    if (this.stageUnlockBtn) {
+      this.stageUnlockBtn.setVisible(!unlocked);
+      this.stageUnlockBtn.setText(`UNLOCK FOR ${cost.coins} COINS`);
+    }
     this.drawStagePreview();
   }
 
@@ -610,9 +642,9 @@ export class SelectScene extends Phaser.Scene {
     if (this.selectionPreviewHost) this.selectionPreviewHost.hidden = !sidePreviewsActive;
     if (this.stagePreviewHost) this.stagePreviewHost.hidden = !sidePreviewsActive;
 
-    this.title.setPosition(width / 2, isMobileShort ? 14 : (compact ? 26 : 38))
+    this.title.setPosition(width / 2, isMobileShort ? 22 : (compact ? 26 : 38))
       .setFontSize(isMobileShort ? '15px' : (compact ? '20px' : '28px'));
-    this.subtitle.setPosition(width / 2, isMobileShort ? 28 : (compact ? 48 : 68))
+    this.subtitle.setPosition(width / 2, isMobileShort ? 38 : (compact ? 48 : 68))
       .setFontSize(isMobileShort ? '10px' : (compact ? '10px' : '13px'));
 
     const columns = isMobileShort ? 8 : 4;
@@ -690,6 +722,13 @@ export class SelectScene extends Phaser.Scene {
     this.stagePrev.setPosition(width / 2 - (isMobileShort ? 145 : (compact ? 120 : 165)), stageY + (isMobileShort ? 0 : 4)).setScale(isMobileShort ? 0.8 : (compact ? 0.7 : 1)).setVisible(isMobileShort || !sidePreviewsActive);
     this.stageNext.setPosition(width / 2 + (isMobileShort ? 145 : (compact ? 120 : 165)), stageY + (isMobileShort ? 0 : 4)).setScale(isMobileShort ? 0.8 : (compact ? 0.7 : 1)).setVisible(isMobileShort || !sidePreviewsActive);
 
+    if (this.stageUnlockBtn) {
+      const stageBtnY = isMobileShort ? 244 : stageY + 34;
+      this.stageUnlockBtn.setPosition(width / 2, stageBtnY)
+        .setScale(isMobileShort ? 0.8 : (compact ? 0.8 : 1))
+        .setVisible((isMobileShort || !sidePreviewsActive) && !isStageUnlocked(this.stages[this.stageIndex].id));
+    }
+
     const isCpuMode = !this.localVersus && this.mode !== 'online';
     this.difficultyLabel?.setVisible(isCpuMode && !isMobileShort);
     this.difficultyButtons?.forEach(button => button.setVisible(isCpuMode));
@@ -716,7 +755,17 @@ export class SelectScene extends Phaser.Scene {
 
   startFight() {
     const selected = roster[this.selectedIndex];
-    if (!isFighterUnlocked(selected.id) || !isStageUnlocked(this.stages[this.stageIndex].id)) return;
+    if (!isFighterUnlocked(selected.id) || !isStageUnlocked(this.stages[this.stageIndex].id)) {
+      if (!isFighterUnlocked(selected.id)) {
+        this.subtitle.setText(`${selected.name} IS LOCKED. UNLOCK THIS FIGHTER TO ENTER BATTLE.`);
+      } else {
+        const currentStage = this.stages[this.stageIndex];
+        const cost = STAGE_UNLOCKS[currentStage.id] || { level: 1, coins: 0 };
+        this.subtitle.setText(`${currentStage.name} IS LOCKED. UNLOCK FOR ${cost.coins} COINS TO ENTER BATTLE.`);
+      }
+      audioManager.playCancel();
+      return;
+    }
     const useCustom = localStorage.getItem('fighter.custom.use.v1') === '1';
     const customSlot = getActiveCustomSlot();
     const savedCustom = useCustom ? loadSlots()[customSlot] : null;

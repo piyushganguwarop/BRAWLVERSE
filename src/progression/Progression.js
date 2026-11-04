@@ -1,11 +1,11 @@
 import { roster } from '../characters/roster.js';
 
 const KEY = 'fighter.progression.v1';
-const FIGHTER_UNLOCKS = {
+export const FIGHTER_UNLOCKS = {
   myst: { level: 2, coins: 100 }, blaze: { level: 3, coins: 180 },
   nova: { level: 4, coins: 240 }, cipher: { level: 5, coins: 300 }, onyx: { level: 6, coins: 400 }
 };
-const STAGE_UNLOCKS = { temple: { level: 3, coins: 150 }, rooftop: { level: 5, coins: 250 } };
+export const STAGE_UNLOCKS = { temple: { level: 3, coins: 150 }, rooftop: { level: 5, coins: 250 } };
 const fresh = () => ({ xp: 0, coins: 0, wins: 0, losses: 0, unlockedFighters: ['atlas','volt','rook'], unlockedStages: ['neon'] });
 export function loadProgression() {
   try {

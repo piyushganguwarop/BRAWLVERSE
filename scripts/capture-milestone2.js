@@ -446,6 +446,266 @@ async function run() {
     `);
     console.log('[Match Stage Parameter Verification]', JSON.stringify(stagePassVerify));
 
+    // =========================================================================
+    // SECTION A: EXPLICIT ARENA UNLOCK & BROWSING BEHAVIOR VERIFICATION
+    // =========================================================================
+    console.log('\n--- VERIFYING ARENA UNLOCK & BROWSING BEHAVIOR ---');
+    // 1. Reset progression to Level 3 with 200 coins and locked Temple/Rooftop
+    await cdp.eval(`
+      (() => {
+        const testProgression = {
+          level: 3,
+          xp: 1500,
+          coins: 200,
+          unlockedFighters: ['atlas', 'volt', 'rook', 'myst'],
+          unlockedStages: ['neon'],
+          stats: { wins: 5, losses: 1 }
+        };
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(testProgression));
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        if (select) {
+          select.progression = testProgression;
+          select.stageIndex = 0;
+          select.updateStageLabel();
+        }
+      })()
+    `);
+    await new Promise(r => setTimeout(r, 400));
+
+    // 2. Browse to Ancient Temple (locked) -> Coins MUST remain 200
+    console.log('Browsing to Ancient Temple (locked arena)...');
+    const browseCheck = await cdp.eval(`
+      (() => {
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        select.changeStage(1); // browse to index 1 (temple)
+        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        const lockEl = document.getElementById('stage-preview-lock');
+        return {
+          stageIndex: select.stageIndex,
+          stageId: select.stages[select.stageIndex].id,
+          coinsBefore: 200,
+          coinsAfter: snap.coins,
+          coinsDeducted: snap.coins !== 200,
+          lockElHidden: lockEl ? lockEl.hidden : true,
+          lockElText: lockEl ? lockEl.textContent : '',
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Arena Browsing Check (No Coin Deduction)]', JSON.stringify(browseCheck));
+    if (browseCheck.coinsDeducted) {
+      throw new Error(`Browsing locked arena deducted coins! Coins were 200, now ${browseCheck.coinsAfter}`);
+    }
+    if (browseCheck.lockElHidden) {
+      throw new Error('Lock button must be visible for locked arena');
+    }
+
+    // 3. Prevent Start Fight on locked arena
+    console.log('Attempting Start Fight on locked Ancient Temple...');
+    const blockedFightCheck = await cdp.eval(`
+      (() => {
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        select.startFight();
+        const activeScene = window.__brawlGame.scene.scenes.find(s => s.scene.isActive());
+        return {
+          activeSceneKey: activeScene?.scene.key,
+          stayedOnSelect: activeScene?.scene.key === 'SelectScene',
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Blocked Fight Check]', JSON.stringify(blockedFightCheck));
+    if (!blockedFightCheck.stayedOnSelect) {
+      throw new Error(`Match was allowed to start on locked arena! Active scene: ${blockedFightCheck.activeSceneKey}`);
+    }
+
+    // 4. Test Insufficient Coins: Try unlocking City Rooftop (costs 250, wallet has 200)
+    console.log('Attempting unlock on City Rooftop with insufficient coins (costs 250, wallet has 200)...');
+    const insufficientCheck = await cdp.eval(`
+      (() => {
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        select.changeStage(1); // browse to rooftop (index 2)
+        select.unlockCurrentStage();
+        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        const lockEl = document.getElementById('stage-preview-lock');
+        return {
+          stageIndex: select.stageIndex,
+          stageId: select.stages[select.stageIndex].id,
+          coins: snap.coins,
+          unlockedStages: snap.unlockedStages,
+          rooftopUnlocked: snap.unlockedStages.includes('rooftop'),
+          lockElHidden: lockEl ? lockEl.hidden : true,
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Insufficient Coins Check]', JSON.stringify(insufficientCheck));
+    if (insufficientCheck.rooftopUnlocked || insufficientCheck.coins !== 200) {
+      throw new Error(`Rooftop incorrectly unlocked with insufficient coins! Wallet: ${insufficientCheck.coins}`);
+    }
+
+    // 5. Explicit Unlock Action: Unlock Ancient Temple (costs 150, wallet has 200)
+    console.log('Performing explicit unlock on Ancient Temple (costs 150, wallet has 200)...');
+    const explicitUnlockCheck = await cdp.eval(`
+      (() => {
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        select.changeStage(-1); // back to temple (index 1)
+        select.unlockCurrentStage(); // explicit unlock action
+        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        const lockEl = document.getElementById('stage-preview-lock');
+        return {
+          stageIndex: select.stageIndex,
+          stageId: select.stages[select.stageIndex].id,
+          expectedCoins: 50,
+          actualCoins: snap.coins,
+          templeUnlocked: snap.unlockedStages.includes('temple'),
+          lockElHidden: lockEl ? lockEl.hidden : false,
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Explicit Unlock Check]', JSON.stringify(explicitUnlockCheck));
+    if (!explicitUnlockCheck.templeUnlocked || explicitUnlockCheck.actualCoins !== 50 || !explicitUnlockCheck.lockElHidden) {
+      throw new Error(`Explicit unlock failed: ${JSON.stringify(explicitUnlockCheck)}`);
+    }
+
+    // =========================================================================
+    // SECTION B: ACTUAL MATCH STARTUP & 3D ARENA VERIFICATION
+    // =========================================================================
+    console.log('\n--- VERIFYING ACTUAL MATCH STARTUP ACROSS ALL ARENAS ---');
+
+    // Helper function to test match startup for a specific stage
+    async function verifyMatchStartup(stageIdx, expectedStageId) {
+      console.log(`[Match Startup Test] Testing arena: ${expectedStageId} (stageIndex ${stageIdx})...`);
+      const startup = await cdp.eval(`
+        (async () => {
+          const select = window.__brawlGame.scene.getScene('SelectScene');
+          select.stageIndex = ${stageIdx};
+          select.updateStageLabel();
+          select.startFight();
+          return true;
+        })()
+      `);
+
+      // Wait for FightScene to become active and ThreeStage to initialize
+      let fightState = null;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        await new Promise(r => setTimeout(r, 200));
+        fightState = await cdp.eval(`
+          (() => {
+            const fight = window.__brawlGame.scene.getScene('FightScene');
+            if (!fight || !fight.scene.isActive() || !fight.three) return null;
+            return {
+              isActive: fight.scene.isActive(),
+              fightStageId: fight.stageId,
+              threeStageId: fight.three.stageId,
+              hasArenaGroup: !!fight.three.arenaGroup,
+              arenaChildrenCount: fight.three.arenaGroup ? fight.three.arenaGroup.children.length : 0,
+              playerReady: !!fight.player,
+              cpuReady: !!fight.cpu
+            };
+          })()
+        `);
+        if (fightState) break;
+      }
+
+      console.log(`[FightScene Runtime State for '${expectedStageId}']`, JSON.stringify(fightState));
+      if (!fightState) throw new Error(`FightScene failed to activate for stage '${expectedStageId}'`);
+      if (fightState.fightStageId !== expectedStageId) {
+        throw new Error(`FightScene stageId mismatch: expected '${expectedStageId}', got '${fightState.fightStageId}'`);
+      }
+      if (fightState.threeStageId !== expectedStageId) {
+        throw new Error(`ThreeStage stageId mismatch: expected '${expectedStageId}', got '${fightState.threeStageId}'`);
+      }
+      if (fightState.arenaChildrenCount === 0) {
+        throw new Error(`3D Arena geometry not populated for stage '${expectedStageId}'`);
+      }
+
+      // Return back to SelectScene
+      await cdp.eval(`
+        (() => {
+          const fight = window.__brawlGame.scene.getScene('FightScene');
+          if (fight) {
+            fight.scene.stop('FightScene');
+            window.__brawlGame.scene.start('SelectScene', { mode: 'arcade' });
+          }
+        })()
+      `);
+
+      // Wait for SelectScene to become active again
+      for (let attempt = 0; attempt < 20; attempt++) {
+        await new Promise(r => setTimeout(r, 150));
+        const ready = await cdp.eval(`
+          (() => {
+            const select = window.__brawlGame.scene.getScene('SelectScene');
+            return select && select.scene.isActive();
+          })()
+        `);
+        if (ready) break;
+      }
+    }
+
+    // Test Neon District startup
+    await verifyMatchStartup(0, 'neon');
+
+    // Test Ancient Temple startup (unlocked above)
+    await verifyMatchStartup(1, 'temple');
+
+    // Test City Rooftop startup (unlock first with level 5+ xp: 3000 xp and 500 coins)
+    const rooftopUnlockResult = await cdp.eval(`
+      (() => {
+        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        snap.xp = 3000;
+        snap.coins = 500;
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(snap));
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        if (select) {
+          select.progression = snap;
+          select.stageIndex = 2; // rooftop
+          select.unlockCurrentStage();
+        }
+        const updated = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        return {
+          unlockedStages: updated.unlockedStages,
+          rooftopUnlocked: updated.unlockedStages.includes('rooftop'),
+          coins: updated.coins
+        };
+      })()
+    `);
+    console.log('[Rooftop Pre-Match Unlock]', JSON.stringify(rooftopUnlockResult));
+    if (!rooftopUnlockResult.rooftopUnlocked) {
+      throw new Error(`Failed to unlock rooftop before match startup: ${JSON.stringify(rooftopUnlockResult)}`);
+    }
+    await new Promise(r => setTimeout(r, 400));
+    await verifyMatchStartup(2, 'rooftop');
+
+    // Restore full progression state for remaining viewport screenshots
+    await cdp.eval(`
+      (() => {
+        const fullProgression = {
+          level: 10,
+          xp: 25000,
+          coins: 50000,
+          unlockedFighters: ['atlas', 'volt', 'rook', 'myst'],
+          unlockedStages: ['neon', 'temple', 'rooftop'],
+          stats: { wins: 30, losses: 5, winStreak: 5, bestStreak: 12, perfects: 4, arcadeClears: 3 }
+        };
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(fullProgression));
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        if (select) {
+          select.progression = fullProgression;
+          select.cardObjects?.forEach(card => {
+            card.setData('locked', false);
+            card.getData('lockLabel')?.setText('');
+          });
+          select.select(0);
+          select.stageIndex = 0;
+          select.updateStageLabel();
+        }
+      })()
+    `);
+    await new Promise(r => setTimeout(r, 400));
+
     // 10. 1366x768 Compact Desktop
     console.log('Testing 1366x768 viewport...');
     await cdp.setViewport(1366, 768);
@@ -496,7 +756,7 @@ async function run() {
         return {
           titleY,
           titleVisible,
-          titleNotClipping: titleY >= 10,
+          titleNotClipping: titleY >= 18,
           cardCount: cards.length,
           allCardsVisible: cards.every(c => c.visible),
           infoVisible,

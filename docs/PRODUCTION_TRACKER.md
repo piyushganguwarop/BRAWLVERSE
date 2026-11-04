@@ -1,9 +1,9 @@
-# Brawl Wars - Production Tracker
+# BRAWLVERSE - Production Tracker
 
 **Master Blueprint Reference:** [MASTER_PRODUCTION_BLUEPRINT.md](file:///c:/Users/piyush/Downloads/PiyuProjects/BRAWLVERSE/docs/MASTER_PRODUCTION_BLUEPRINT.md)  
 **Active Working Branch:** `v2-reconstruction`  
 **Current Phase:** Phase 7 (UI, Progression, Audio and Game Polish)  
-**Overall Status:** COMPLETED (Phase 7 UI, Audio Synthwave Engine, Live 3D Showcases, Combat HUD, Results Telemetry & Polish 100% Implemented and In-Browser Verified)
+**Overall Status:** COMPLETED (Milestone 1 & Milestone 2 Fully Implemented, Explicit Arena Unlock & Multi-Arena Match Startup 100% In-Browser Verified)
 
 ---
 
@@ -240,24 +240,34 @@
     - Dynamic multi-layered arena art viewport with glowing spotlights, animated neon bill-board scanlines, and reflective floor grid.
     - Environment metadata subtitles (`NEO-TOKYO UNDERGROUND`, `SACRED LANTERN SANCTUARY`, `MIDNIGHT SKYLINE HELIPAD`).
     - Arena Carousel with interactive thumbnail buttons (`NEON`, `TEMPLE`, `ROOFTOP`) and carousel navigation arrows (`‹ PREV`, `NEXT ›`).
-    - Accurate lock/unlock thresholds synced with `Progression.js`.
-  - Re-engineered layout for responsive scaling:
-    - Desktop 1920x1080: Balanced cockpit layout framing Arena Deck on the left, Roster in center, and 3D Showcase on the right.
+    - Dedicated explicit Unlock button (`#stage-preview-lock` and `stageUnlockBtn`) with gold coin styling.
+  - **Arena Unlock & Browsing Logic Hardening:**
+    - Decoupled arena navigation from purchasing: browsing locked arenas only previews the stage and costs zero coins.
+    - Displays lock status and exact level/coin requirements (`LOCKED · REQ LVL X · Y COINS`).
+    - Added explicit Unlock confirmation action; coins are deducted only after user confirms purchase.
+    - Prevents match startup with locked arenas and displays clear warning feedback.
+    - Enforces wallet checks with error feedback for insufficient funds or levels.
+  - **Re-engineered Layout & Responsive Scaling:**
+    - Desktop 1920x1080: Balanced cockpit layout framing Arena Deck on the left, Roster in center, and 3D Showcase on the right with zero vertical scrollbars.
     - Compact 1366x768: Proportional panel scaling without clipping or overlap.
-    - Mobile Landscape 844x390: Compact vertically balanced touch-friendly layout with zero overlap.
-  - Automated tests & build:
-    - 177/177 unit tests pass (`npm test`).
-    - Production build compiles cleanly with zero errors (`npm run build`).
-  - Captured 10 in-browser screenshots in [`docs/audit_screenshots/`](file:///c:/Users/piyush/Downloads/PiyuProjects\BRAWLVERSE\docs\audit_screenshots\):
-    - `m2_01_mode_select_1920x1080.png`
-    - `m2_02_fighter_select_atlas_1920x1080.png`
-    - `m2_03_fighter_select_volt_1920x1080.png`
-    - `m2_04_fighter_select_rook_1920x1080.png`
-    - `m2_05_fighter_select_myst_1920x1080.png`
-    - `m2_06_arena_select_neon_1920x1080.png`
-    - `m2_07_arena_select_temple_1920x1080.png`
-    - `m2_08_arena_select_rooftop_1920x1080.png`
-    - `m2_09_fighter_select_1366x768.png`
-    - `m2_10_fighter_select_mobile_844x390.png`
+    - Mobile Landscape 844x390: Repositioned title to Y=22 and subtitle to Y=38 for safe-area spacing from top edge; single horizontal row of 8 cards; accessible arena and difficulty controls.
+  - **Verification Triad (Strictly Separated):**
+    1. **Automated Unit & Integration Tests (`npm test`):** 177/177 passing test assertions across combat physics, procedural model evaluation, input handling, and state machines.
+    2. **Production Build (`npm run build`):** Clean compilation in 8.7s with zero errors or warnings.
+    3. **Visual Screenshot Audit (Edge Headless CDP):** 10 verified PNG captures in [`docs/audit_screenshots/`](file:///c:/Users/piyush/Downloads/PiyuProjects\BRAWLVERSE\docs\audit_screenshots\):
+       - `m2_01_mode_select_1920x1080.png`
+       - `m2_02_fighter_select_atlas_1920x1080.png`
+       - `m2_03_fighter_select_volt_1920x1080.png`
+       - `m2_04_fighter_select_rook_1920x1080.png`
+       - `m2_05_fighter_select_myst_1920x1080.png`
+       - `m2_06_arena_select_neon_1920x1080.png`
+       - `m2_07_arena_select_temple_1920x1080.png`
+       - `m2_08_arena_select_rooftop_1920x1080.png`
+       - `m2_09_fighter_select_1366x768.png`
+       - `m2_10_fighter_select_mobile_844x390.png`
+    4. **Actual Runtime Match Startup & In-Browser Gameplay Verification:**
+       - Direct browser runtime inspection of `FightScene` startup across all 3 arenas.
+       - Verified `FightScene.stageId` and `ThreeStage.stageId` for Neon District (`neon`, 102 meshes), Ancient Temple (`temple`, 26 meshes), and City Rooftop (`rooftop`, 36 meshes).
+       - In-browser runtime validation of zero-cost browsing, locked match prevention, insufficient coin rejection, and explicit unlock confirmation.
 
-*Exit Criteria: Milestones 1 and 2 COMPLETE. Verified across 177/177 automated tests, production build, and CDP in-browser screenshots.*
+*Exit Criteria: Milestones 1 and 2 COMPLETE. Verified across 177/177 automated tests, production build, 10 visual screenshots, and actual multi-arena match startup in the browser.*

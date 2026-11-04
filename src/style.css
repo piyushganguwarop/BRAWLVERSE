@@ -979,15 +979,31 @@ html, body, #game-root { width: 100%; height: 100%; margin: 0; overflow: hidden;
 }
 .stage-preview-lock {
   margin-top: 6px;
-  padding: 5px 8px;
-  background: rgba(255, 61, 145, 0.15);
+  padding: 6px 10px;
+  background: rgba(255, 61, 145, 0.18);
   border: 1px solid var(--bv-magenta);
-  color: var(--bv-magenta);
+  color: #ff85b3;
   font-family: var(--bv-heading);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
   text-align: center;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.stage-preview-lock:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 61, 145, 0.32);
+  border-color: #ff66a3;
+  color: #ffffff;
+}
+.stage-preview-lock strong {
+  color: var(--bv-gold);
+  text-decoration: underline;
+  margin-left: 4px;
 }
 
 @media (max-width: 1499px) {

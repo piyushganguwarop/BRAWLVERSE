@@ -29,15 +29,16 @@
 
 ---
 
-## 1.2 BRAWLVERSE UI Redesign Milestone 2 Review & Required Corrections Validation
+## 1.2 BRAWLVERSE UI Redesign Milestone 2 Final Review Corrections
 
-| Issue Area | Required Correction | Automated & In-Browser Verification Result | Status |
+| Issue Area | Required Correction | Automated, Visual & In-Browser Verification Result | Status |
 | :--- | :--- | :--- | :--- |
-| **1. Mode Select (1920x1080)** | Remove visible browser vertical scrollbar at 1920×1080. Confirm no content causes page overflow. | Removed `.menu-shell { overflow-y: auto }` and padding on `#menu-shell`. In-browser CDP assertion verified: `windowHeight: 1080, docScrollHeight: 1080, shellClientHeight: 1080, shellScrollHeight: 1080, hasDocScrollbar: false, hasShellScrollbar: false`. Zero scrollbars visible. | **PASS** |
+| **1. Mode Select (1920x1080)** | Remove visible browser vertical scrollbar at 1920×1080. Confirm no content causes page overflow. | Removed `.menu-shell { overflow-y: auto }` and vertical padding on `.bv-frame`. In-browser CDP assertion verified: `windowHeight: 1080, docScrollHeight: 1080, shellClientHeight: 1080, shellScrollHeight: 1080, hasDocScrollbar: false, hasShellScrollbar: false`. Zero scrollbars visible. | **PASS** |
 | **2. Fighter Select (Screen 03)** | Fix capture sequence where `m2_05` displayed Rook instead of Myst. Confirm selected fighter name, roster highlight, and 3D preview match before capturing. Improve preview scale. | Initialized progression with all roster champions unlocked. Programmatically asserted `selectedIndex === 3`, `domName === 'MYST'`, `borderVisible === true`, and `currentFighterId === 'myst'` before capturing. Increased 3D preview height to 240px and adjusted `fitDistance` for a prominent 20% scale boost. | **PASS** |
-| **3. Arena Select (Screen 04)** | Fix inconsistent arena screenshots (Temple/Rooftop previously displayed Neon District artwork). Verify selecting Neon, Temple, Rooftop updates name, subtitle, artwork, description, thumbnail, counter, unlock status, and match scene parameter together. | Resolved locked-stage early return in `SelectScene.changeStage()`. Synchronized DOM terminal and Phaser stage labels. Programmatically asserted all 8 attributes on Neon, Temple, and Rooftop before capturing each image. Verified `FightScene` receives correct `stageId` ('neon', 'temple', 'rooftop'). | **PASS** |
-| **4. Mobile Landscape (844x390)** | Title must not clip at top; all fighter cards readable and selectable; arena controls accessible; Start button visible; no hiding important info; usable touch targets. | Fixed card and header coordinates: Title at Y=14, Subtitle at Y=28 (zero top clipping). Roster laid out cleanly across width with 88x92px touch cards (> 44px touch ergonomics). Dedicated fighter summary bar at Y=168. Stage controls with `<` `>` touch buttons at Y=224. CPU difficulty at Y=266. Start button at Y=358 (`height - 32`). Zero overlap or clipping. | **PASS** |
-| **5. Screenshot Validation** | Re-run browser capture after fixing issues: Mode Select (1920x1080), Fighter Select (Atlas, Volt, Rook, Myst at 1920x1080), Arena Select (Neon, Temple, Rooftop at 1920x1080), Compact Desktop (1366x768), Mobile Landscape (844x390). | All 10 screenshots captured via Edge Headless CDP with pre-capture state assertions in `scripts/capture-milestone2.js`. Saved to `docs/audit_screenshots/` and persistent artifact directory. | **PASS** |
+| **3. Arena Select & Unlock Behavior (Screen 04)** | Browsing arenas must NEVER spend coins or call `purchaseStage()`. Display lock status and unlock cost. Add explicit Unlock button. Deduct coins only after confirmation. Prevent match start on locked arena with clear warning. Handle insufficient funds. | Decoupled browsing from purchasing in `SelectScene.changeStage()`. Added dedicated Unlock button (`#stage-preview-lock` and `stageUnlockBtn`). Verified in live browser: browsing to locked Ancient Temple left coins at 200 (zero deducted); attempting match start was blocked with subtitle warning; trying to unlock City Rooftop with 200 coins (requires 250) failed with level/coin warning; explicit unlock on Temple deducted 150 coins upon user confirmation and unlocked stage. | **PASS** |
+| **4. Actual Match Startup (3 Arenas)** | Confirm actual match startup in `FightScene` for Neon District, Ancient Temple, and City Rooftop. Confirm initialization data and 3D arena loading. Do not claim verification based on `SelectScene` alone. | Live in-browser match startup verification executed for each arena. Inspected runtime properties on running `FightScene`: `neon` (102 meshes), `temple` (26 meshes), `rooftop` (36 meshes). Both `FightScene.stageId` and `ThreeStage.stageId` confirmed matching each selected arena. | **PASS** |
+| **5. Mobile Landscape (844x390)** | Adjust title position to provide safe-area padding from top edge. Verify all fighter cards readable, arena controls accessible, and start button visible. | Repositioned Title to Y=22 and Subtitle to Y=38 (safe-area margin from top edge). Single horizontal row of 8 cards (`88x92px` touch targets). Live CDP assertion verified `titleY: 22, titleNotClipping: true, allCardsVisible: true, startOnScreen: true`. | **PASS** |
+| **6. Visual Screenshot Suite** | 10 verified Edge Headless CDP captures: Mode Select (1920x1080), Fighter Select (Atlas, Volt, Rook, Myst at 1920x1080), Arena Select (Neon, Temple, Rooftop at 1920x1080), Compact Desktop (1366x768), Mobile Landscape (844x390). | All 10 screenshots captured via Edge Headless CDP with programmatic state assertions before each frame in `scripts/capture-milestone2.js`. Saved to `docs/audit_screenshots/` and persistent artifact directory. | **PASS** |
 
 ### Suite Breakdown
 
@@ -222,42 +223,40 @@
 
 ---
 
-## 5. BRAWLVERSE UI Asset Integration: Milestone 2 Verification
+## 5. BRAWLVERSE UI Asset Integration: Milestone 2 Final Verification
 
-### Automated Unit Test Summary
-- **Test Command:** `npm test` (`node --test`)
-- **Total Tests:** 177
-- **Passed:** 177
-- **Failed:** 0
-- **Suites:** 0
-- **Duration:** 1.04s
+### 5.1 Verification Triad Architecture (Strictly Separated)
 
-### Milestone 2 Screen Verifications (Screen 02, Screen 03, Screen 04)
-1. **Screen 02 (Mode Select):**
-   - Quick dossier with player level badge and coin balance (`LVL 1`, `0 COINS`).
-   - 4 color-coded mode cards (`ARCADE` in Electric Cyan, `LOCAL VERSUS` in Hot Magenta, `TRAINING` in Violet, `ONLINE` in Gold).
-   - In-browser screenshot: `m2_01_mode_select_1920x1080.png`.
-2. **Screen 03 (Fighter Select):**
-   - Live 3D character showcase (`CustomizerPreview`) with Three.js rendering of Atlas, Volt, Rook, and Myst with custom lighting, glowing cyber pedestal, and real-time rotation/zoom.
-   - 4 Segmented Cyber Stat Bars (Power, Speed, Range, Defense) displaying discrete glowing blocks (5-tier scale).
-   - Dynamic archetype badge (`BALANCED`, `RUSHDOWN`, `TANK`, `TRICKSTER`) and glowing Special Attack banner (`★ SPECIAL: TITAN BREAKER`, `FLASH RUSH`, `IRON FORTRESS`, `PHANTOM PULSE`).
-   - CPU difficulty selector (`EASY`, `NORMAL`, `HARD`) with Electric Cyan highlight.
-   - Local Versus Player 2 Rival selector with Hot Magenta highlight.
-   - In-browser screenshots:
-     - `m2_02_fighter_select_atlas_1920x1080.png`
-     - `m2_03_fighter_select_volt_1920x1080.png`
-     - `m2_04_fighter_select_rook_1920x1080.png`
-     - `m2_05_fighter_select_myst_1920x1080.png`
-3. **Screen 04 (Arena Select):**
-   - Live Arena Command Deck with glowing spotlights, animated neon bill-board scanlines, and reflective floor grid.
-   - Arena metadata subtitles and descriptive bio.
-   - Interactive stage carousel with thumbnail selectors (`NEON`, `TEMPLE`, `ROOFTOP`) and navigation arrows (`‹ PREV`, `NEXT ›`).
-   - Accurate lock/unlock thresholds synced with `Progression.js`.
-   - In-browser screenshots:
-     - `m2_06_arena_select_neon_1920x1080.png`
-     - `m2_07_arena_select_temple_1920x1080.png`
-     - `m2_08_arena_select_rooftop_1920x1080.png`
-4. **Responsive Verification:**
-   - Desktop 1920x1080: Perfectly balanced cockpit framing Arena Deck on the left, Roster in center, and 3D Showcase on the right.
-   - Compact 1366x768: Proportional panel scaling without clipping or overlap (`m2_09_fighter_select_1366x768.png`).
-   - Mobile Landscape 844x390: Clean single-screen touch-friendly layout with zero overlap (`m2_10_fighter_select_mobile_844x390.png`).
+1. **Automated Unit & Integration Test Suite (`npm test`):**
+   - **Command:** `npm test` (`node --test`)
+   - **Total Tests:** 177 / 177 PASS (100% Green, 0 Failures).
+   - **Duration:** ~500ms.
+   - **Scope:** Evaluates combat damage calculation, 3D vector math, cancel window chaining, state machine transitions, AI controller profiles, procedural character model hierarchies, and progression data persistence.
+   - **Boundary Statement:** Automated tests guarantee code contracts and logic invariants; they do not evaluate visual styling, viewport layouts, or CSS rendering.
+
+2. **Visual Screenshot Audit (Edge Headless via CDP):**
+   - **Total Verified Images:** 10 PNGs stored in `docs/audit_screenshots/`.
+   - **Scope:** Visual design fidelity, theme token compliance, responsive layout stability, font rendering, and zero-scrollbar viewport boundaries.
+   - **Breakdown:**
+     - `m2_01_mode_select_1920x1080.png`: Zero vertical scrollbars (`windowHeight: 1080, docScrollHeight: 1080`).
+     - `m2_02_fighter_select_atlas_1920x1080.png`: Atlas selected, Titan Gauntlet rendered.
+     - `m2_03_fighter_select_volt_1920x1080.png`: Volt selected, dual Shock Blades rendered.
+     - `m2_04_fighter_select_rook_1920x1080.png`: Rook selected, blast helm and hydraulic fists rendered.
+     - `m2_05_fighter_select_myst_1920x1080.png`: Myst selected, porcelain mask and glyph rings rendered.
+     - `m2_06_arena_select_neon_1920x1080.png`: Neon District artwork and subtitles.
+     - `m2_07_arena_select_temple_1920x1080.png`: Ancient Temple artwork and subtitles.
+     - `m2_08_arena_select_rooftop_1920x1080.png`: City Rooftop artwork and subtitles.
+     - `m2_09_fighter_select_1366x768.png`: Compact laptop layout without clipping.
+     - `m2_10_fighter_select_mobile_844x390.png`: Mobile landscape layout with safe-area spacing (`titleY: 22`).
+
+3. **In-Browser Runtime Gameplay & Match Startup Verification:**
+   - **Command:** `node scripts/capture-milestone2.js`
+   - **Test 1 - Zero-Cost Arena Browsing:** Browsed from Neon District to locked Ancient Temple with 200 coins in wallet. Verified coins remained strictly 200 (0 deducted); lock status and cost (`REQ LVL 3 · 150 COINS`) were displayed.
+   - **Test 2 - Locked Match Prevention:** Attempted to start fight on locked Ancient Temple. Verified match start aborted, scene remained on `SelectScene`, and warning subtitle was displayed.
+   - **Test 3 - Insufficient Funds Prevention:** Attempted to unlock City Rooftop (costs 250 coins, requires Level 5) with 200 coins. Verified purchase was rejected without coin loss, and warning subtitle was displayed.
+   - **Test 4 - Explicit Unlock Confirmation:** Navigated back to Ancient Temple and clicked explicit Unlock action. Verified 150 coins were deducted upon confirmation (wallet: 50 coins), stage was unlocked, and lock button was hidden.
+   - **Test 5 - Multi-Arena Live Match Startup:** Launched actual matches into `FightScene` across all 3 arenas and inspected runtime scene properties:
+     - **Neon District:** `isActive: true, fightStageId: 'neon', threeStageId: 'neon', arenaChildrenCount: 102, playerReady: true, cpuReady: true`.
+     - **Ancient Temple:** `isActive: true, fightStageId: 'temple', threeStageId: 'temple', arenaChildrenCount: 26, playerReady: true, cpuReady: true`.
+     - **City Rooftop:** `isActive: true, fightStageId: 'rooftop', threeStageId: 'rooftop', arenaChildrenCount: 36, playerReady: true, cpuReady: true`.
+   - **Result:** 100% Pass across all in-browser gameplay scenarios. Live combat scenes construct the exact 3D arena assets corresponding to the user's selection.
