@@ -247,9 +247,9 @@
      - `m2_07_arena_select_temple_1920x1080.png`: Ancient Temple artwork and subtitles.
      - `m2_08_arena_select_rooftop_1920x1080.png`: City Rooftop artwork and subtitles.
      - `m2_09_fighter_select_1366x768.png`: Compact laptop layout without clipping.
-     - `m2_10_fighter_select_mobile_844x390.png`: Mobile landscape layout with safe-area spacing (`titleY: 22`).
+     - `m2_10_fighter_select_mobile_844x390.png`: Mobile landscape layout with locked Ancient Temple selected; safe-area spacing and distinct vertical tiers (`titleY: 22, stageY: 198, descY: 214, unlockBtnY: 244, diffBtnY: 284, startY: 358, noOverlap: true`).
 
-3. **In-Browser Runtime Gameplay & Match Startup Verification:**
+3. **In-Browser Runtime Gameplay & UI Button Interaction Verification:**
    - **Command:** `node scripts/capture-milestone2.js`
    - **Test 1 - Zero-Cost Arena Browsing:** Browsed from Neon District to locked Ancient Temple with 200 coins in wallet. Verified coins remained strictly 200 (0 deducted); lock status and cost (`REQ LVL 3 · 150 COINS`) were displayed.
    - **Test 2 - Locked Match Prevention:** Attempted to start fight on locked Ancient Temple. Verified match start aborted, scene remained on `SelectScene`, and warning subtitle was displayed.

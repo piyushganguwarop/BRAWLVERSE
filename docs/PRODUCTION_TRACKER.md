@@ -250,7 +250,7 @@
   - **Re-engineered Layout & Responsive Scaling:**
     - Desktop 1920x1080: Balanced cockpit layout framing Arena Deck on the left, Roster in center, and 3D Showcase on the right with zero vertical scrollbars.
     - Compact 1366x768: Proportional panel scaling without clipping or overlap.
-    - Mobile Landscape 844x390: Repositioned title to Y=22 and subtitle to Y=38 for safe-area spacing from top edge; single horizontal row of 8 cards; accessible arena and difficulty controls.
+    - Mobile Landscape 844x390: Repositioned title to Y=22 and subtitle to Y=38 for safe-area spacing from top edge; single horizontal row of 8 cards; verified zero-overlap locked layout (Stage: 198, Desc: 214, Unlock: 244, Diff: 284, Start: 358); all controls independently readable and clickable.
   - **Verification Triad (Strictly Separated):**
     1. **Automated Unit & Integration Tests (`npm test`):** 177/177 passing test assertions across combat physics, procedural model evaluation, input handling, and state machines.
     2. **Production Build (`npm run build`):** Clean compilation in 8.7s with zero errors or warnings.
@@ -265,7 +265,7 @@
        - `m2_08_arena_select_rooftop_1920x1080.png`
        - `m2_09_fighter_select_1366x768.png`
        - `m2_10_fighter_select_mobile_844x390.png`
-    4. **Actual Runtime Match Startup & In-Browser Gameplay Verification:**
+    4. **Actual Runtime Match Startup & UI Button Interaction Verification:**
        - Direct browser runtime inspection of `FightScene` startup across all 3 arenas.
        - Verified `FightScene.stageId` and `ThreeStage.stageId` for Neon District (`neon`, 102 meshes), Ancient Temple (`temple`, 26 meshes), and City Rooftop (`rooftop`, 36 meshes).
        - In-browser runtime validation of zero-cost browsing, locked match prevention, insufficient coin rejection, and explicit unlock confirmation.

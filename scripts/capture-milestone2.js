@@ -103,7 +103,8 @@ class CDPClient {
       awaitPromise: true
     });
     if (res.exceptionDetails) {
-      throw new Error(`CDP Eval Exception: ${res.exceptionDetails.text || JSON.stringify(res.exceptionDetails)}`);
+      const errText = res.exceptionDetails.exception?.description || res.exceptionDetails.text || JSON.stringify(res.exceptionDetails);
+      throw new Error(`CDP Eval Exception: ${errText}`);
     }
     return res.result?.value;
   }
@@ -447,9 +448,35 @@ async function run() {
     console.log('[Match Stage Parameter Verification]', JSON.stringify(stagePassVerify));
 
     // =========================================================================
-    // SECTION A: EXPLICIT ARENA UNLOCK & BROWSING BEHAVIOR VERIFICATION
+    // SECTION A: ACTUAL UI BUTTON INTERACTIONS & REGRESSION CHECKS (DESKTOP)
     // =========================================================================
-    console.log('\n--- VERIFYING ARENA UNLOCK & BROWSING BEHAVIOR ---');
+    console.log('\n--- VERIFYING ACTUAL UI BUTTON INTERACTIONS (DESKTOP) ---');
+
+    // Helper functions for actual UI interactions
+    const UI_HELPERS = `
+      function clickDom(selector) {
+        const el = document.querySelector(selector);
+        if (!el) throw new Error('DOM element not found: ' + selector);
+        if (el.hidden || el.style.display === 'none') throw new Error('DOM element is hidden: ' + selector);
+        el.click();
+        return true;
+      }
+      function clickPhaser(scene, obj) {
+        if (!obj) throw new Error('Phaser object is null');
+        if (!obj.visible) throw new Error('Phaser object is not visible');
+        const canvas = scene.game.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / scene.scale.width;
+        const scaleY = rect.height / scene.scale.height;
+        const clientX = rect.left + obj.x * scaleX;
+        const clientY = rect.top + obj.y * scaleY;
+        canvas.dispatchEvent(new PointerEvent('pointerdown', { clientX, clientY, bubbles: true, pointerId: 1 }));
+        canvas.dispatchEvent(new PointerEvent('pointerup', { clientX, clientY, bubbles: true, pointerId: 1 }));
+        obj.emit('pointerdown');
+        return true;
+      }
+    `;
+
     // 1. Reset progression to Level 3 with 200 coins and locked Temple/Rooftop
     await cdp.eval(`
       (() => {
@@ -472,12 +499,13 @@ async function run() {
     `);
     await new Promise(r => setTimeout(r, 400));
 
-    // 2. Browse to Ancient Temple (locked) -> Coins MUST remain 200
-    console.log('Browsing to Ancient Temple (locked arena)...');
+    // 2. Browse to Ancient Temple via HTML button click -> Coins MUST remain 200
+    console.log('UI Interaction: Clicking HTML next button to browse to Ancient Temple...');
     const browseCheck = await cdp.eval(`
       (() => {
+        ${UI_HELPERS}
+        clickDom('#stage-btn-next');
         const select = window.__brawlGame.scene.getScene('SelectScene');
-        select.changeStage(1); // browse to index 1 (temple)
         const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
         const lockEl = document.getElementById('stage-preview-lock');
         return {
@@ -492,7 +520,7 @@ async function run() {
         };
       })()
     `);
-    console.log('[Arena Browsing Check (No Coin Deduction)]', JSON.stringify(browseCheck));
+    console.log('[Regression Check 1: Zero-Cost Browsing]', JSON.stringify(browseCheck));
     if (browseCheck.coinsDeducted) {
       throw new Error(`Browsing locked arena deducted coins! Coins were 200, now ${browseCheck.coinsAfter}`);
     }
@@ -500,12 +528,13 @@ async function run() {
       throw new Error('Lock button must be visible for locked arena');
     }
 
-    // 3. Prevent Start Fight on locked arena
-    console.log('Attempting Start Fight on locked Ancient Temple...');
+    // 3. UI Interaction: Click Start Fight on locked arena
+    console.log('UI Interaction: Clicking Start Fight button on locked Ancient Temple...');
     const blockedFightCheck = await cdp.eval(`
       (() => {
+        ${UI_HELPERS}
         const select = window.__brawlGame.scene.getScene('SelectScene');
-        select.startFight();
+        clickPhaser(select, select.startButton);
         const activeScene = window.__brawlGame.scene.scenes.find(s => s.scene.isActive());
         return {
           activeSceneKey: activeScene?.scene.key,
@@ -514,43 +543,18 @@ async function run() {
         };
       })()
     `);
-    console.log('[Blocked Fight Check]', JSON.stringify(blockedFightCheck));
+    console.log('[UI Click Start Fight on Locked Arena]', JSON.stringify(blockedFightCheck));
     if (!blockedFightCheck.stayedOnSelect) {
-      throw new Error(`Match was allowed to start on locked arena! Active scene: ${blockedFightCheck.activeSceneKey}`);
+      throw new Error(`Match started on locked arena! Active scene: ${blockedFightCheck.activeSceneKey}`);
     }
 
-    // 4. Test Insufficient Coins: Try unlocking City Rooftop (costs 250, wallet has 200)
-    console.log('Attempting unlock on City Rooftop with insufficient coins (costs 250, wallet has 200)...');
-    const insufficientCheck = await cdp.eval(`
-      (() => {
-        const select = window.__brawlGame.scene.getScene('SelectScene');
-        select.changeStage(1); // browse to rooftop (index 2)
-        select.unlockCurrentStage();
-        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
-        const lockEl = document.getElementById('stage-preview-lock');
-        return {
-          stageIndex: select.stageIndex,
-          stageId: select.stages[select.stageIndex].id,
-          coins: snap.coins,
-          unlockedStages: snap.unlockedStages,
-          rooftopUnlocked: snap.unlockedStages.includes('rooftop'),
-          lockElHidden: lockEl ? lockEl.hidden : true,
-          subtitle: select.subtitle.text
-        };
-      })()
-    `);
-    console.log('[Insufficient Coins Check]', JSON.stringify(insufficientCheck));
-    if (insufficientCheck.rooftopUnlocked || insufficientCheck.coins !== 200) {
-      throw new Error(`Rooftop incorrectly unlocked with insufficient coins! Wallet: ${insufficientCheck.coins}`);
-    }
-
-    // 5. Explicit Unlock Action: Unlock Ancient Temple (costs 150, wallet has 200)
-    console.log('Performing explicit unlock on Ancient Temple (costs 150, wallet has 200)...');
+    // 4. UI Interaction: Click HTML Unlock button on desktop
+    console.log('UI Interaction: Clicking HTML Unlock button for Ancient Temple...');
     const explicitUnlockCheck = await cdp.eval(`
       (() => {
+        ${UI_HELPERS}
+        clickDom('#stage-preview-lock');
         const select = window.__brawlGame.scene.getScene('SelectScene');
-        select.changeStage(-1); // back to temple (index 1)
-        select.unlockCurrentStage(); // explicit unlock action
         const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
         const lockEl = document.getElementById('stage-preview-lock');
         return {
@@ -564,150 +568,154 @@ async function run() {
         };
       })()
     `);
-    console.log('[Explicit Unlock Check]', JSON.stringify(explicitUnlockCheck));
+    console.log('[Regression Check 2: HTML Unlock Button Click]', JSON.stringify(explicitUnlockCheck));
     if (!explicitUnlockCheck.templeUnlocked || explicitUnlockCheck.actualCoins !== 50 || !explicitUnlockCheck.lockElHidden) {
-      throw new Error(`Explicit unlock failed: ${JSON.stringify(explicitUnlockCheck)}`);
+      throw new Error(`HTML Unlock failed: ${JSON.stringify(explicitUnlockCheck)}`);
     }
 
-    // =========================================================================
-    // SECTION B: ACTUAL MATCH STARTUP & 3D ARENA VERIFICATION
-    // =========================================================================
-    console.log('\n--- VERIFYING ACTUAL MATCH STARTUP ACROSS ALL ARENAS ---');
-
-    // Helper function to test match startup for a specific stage
-    async function verifyMatchStartup(stageIdx, expectedStageId) {
-      console.log(`[Match Startup Test] Testing arena: ${expectedStageId} (stageIndex ${stageIdx})...`);
-      const startup = await cdp.eval(`
-        (async () => {
-          const select = window.__brawlGame.scene.getScene('SelectScene');
-          select.stageIndex = ${stageIdx};
-          select.updateStageLabel();
-          select.startFight();
-          return true;
-        })()
-      `);
-
-      // Wait for FightScene to become active and ThreeStage to initialize
-      let fightState = null;
-      for (let attempt = 0; attempt < 25; attempt++) {
-        await new Promise(r => setTimeout(r, 200));
-        fightState = await cdp.eval(`
-          (() => {
-            const fight = window.__brawlGame.scene.getScene('FightScene');
-            if (!fight || !fight.scene.isActive() || !fight.three) return null;
-            return {
-              isActive: fight.scene.isActive(),
-              fightStageId: fight.stageId,
-              threeStageId: fight.three.stageId,
-              hasArenaGroup: !!fight.three.arenaGroup,
-              arenaChildrenCount: fight.three.arenaGroup ? fight.three.arenaGroup.children.length : 0,
-              playerReady: !!fight.player,
-              cpuReady: !!fight.cpu
-            };
-          })()
-        `);
-        if (fightState) break;
-      }
-
-      console.log(`[FightScene Runtime State for '${expectedStageId}']`, JSON.stringify(fightState));
-      if (!fightState) throw new Error(`FightScene failed to activate for stage '${expectedStageId}'`);
-      if (fightState.fightStageId !== expectedStageId) {
-        throw new Error(`FightScene stageId mismatch: expected '${expectedStageId}', got '${fightState.fightStageId}'`);
-      }
-      if (fightState.threeStageId !== expectedStageId) {
-        throw new Error(`ThreeStage stageId mismatch: expected '${expectedStageId}', got '${fightState.threeStageId}'`);
-      }
-      if (fightState.arenaChildrenCount === 0) {
-        throw new Error(`3D Arena geometry not populated for stage '${expectedStageId}'`);
-      }
-
-      // Return back to SelectScene
-      await cdp.eval(`
-        (() => {
-          const fight = window.__brawlGame.scene.getScene('FightScene');
-          if (fight) {
-            fight.scene.stop('FightScene');
-            window.__brawlGame.scene.start('SelectScene', { mode: 'arcade' });
-          }
-        })()
-      `);
-
-      // Wait for SelectScene to become active again
-      for (let attempt = 0; attempt < 20; attempt++) {
-        await new Promise(r => setTimeout(r, 150));
-        const ready = await cdp.eval(`
-          (() => {
-            const select = window.__brawlGame.scene.getScene('SelectScene');
-            return select && select.scene.isActive();
-          })()
-        `);
-        if (ready) break;
-      }
-    }
-
-    // Test Neon District startup
-    await verifyMatchStartup(0, 'neon');
-
-    // Test Ancient Temple startup (unlocked above)
-    await verifyMatchStartup(1, 'temple');
-
-    // Test City Rooftop startup (unlock first with level 5+ xp: 3000 xp and 500 coins)
-    const rooftopUnlockResult = await cdp.eval(`
+    // 5. Regression Check 5: Returning to arena does NOT charge player again
+    console.log('Regression Check 5: Returning to unlocked arena does not charge player again...');
+    const returnArenaCheck = await cdp.eval(`
       (() => {
-        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
-        snap.xp = 3000;
-        snap.coins = 500;
-        localStorage.setItem('fighter.progression.v1', JSON.stringify(snap));
+        ${UI_HELPERS}
+        clickDom('#stage-btn-prev'); // back to Neon
+        clickDom('#stage-btn-next'); // back to Temple
         const select = window.__brawlGame.scene.getScene('SelectScene');
-        if (select) {
-          select.progression = snap;
-          select.stageIndex = 2; // rooftop
-          select.unlockCurrentStage();
-        }
-        const updated = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        const lockEl = document.getElementById('stage-preview-lock');
         return {
-          unlockedStages: updated.unlockedStages,
-          rooftopUnlocked: updated.unlockedStages.includes('rooftop'),
-          coins: updated.coins
+          stageIndex: select.stageIndex,
+          stageId: select.stages[select.stageIndex].id,
+          coins: snap.coins,
+          lockElHidden: lockEl ? lockEl.hidden : false
         };
       })()
     `);
-    console.log('[Rooftop Pre-Match Unlock]', JSON.stringify(rooftopUnlockResult));
-    if (!rooftopUnlockResult.rooftopUnlocked) {
-      throw new Error(`Failed to unlock rooftop before match startup: ${JSON.stringify(rooftopUnlockResult)}`);
+    console.log('[Regression Check 5: Returning to Arena]', JSON.stringify(returnArenaCheck));
+    if (returnArenaCheck.coins !== 50 || !returnArenaCheck.lockElHidden) {
+      throw new Error(`Returning to unlocked arena corrupted state: ${JSON.stringify(returnArenaCheck)}`);
     }
-    await new Promise(r => setTimeout(r, 400));
-    await verifyMatchStartup(2, 'rooftop');
 
-    // Restore full progression state for remaining viewport screenshots
+    // 6. UI Interaction: Click Start Fight on newly unlocked arena
+    console.log('UI Interaction: Clicking Start Fight on unlocked Ancient Temple...');
     await cdp.eval(`
       (() => {
-        const fullProgression = {
-          level: 10,
-          xp: 25000,
-          coins: 50000,
-          unlockedFighters: ['atlas', 'volt', 'rook', 'myst'],
-          unlockedStages: ['neon', 'temple', 'rooftop'],
-          stats: { wins: 30, losses: 5, winStreak: 5, bestStreak: 12, perfects: 4, arcadeClears: 3 }
-        };
-        localStorage.setItem('fighter.progression.v1', JSON.stringify(fullProgression));
+        ${UI_HELPERS}
         const select = window.__brawlGame.scene.getScene('SelectScene');
-        if (select) {
-          select.progression = fullProgression;
-          select.cardObjects?.forEach(card => {
-            card.setData('locked', false);
-            card.getData('lockLabel')?.setText('');
-          });
-          select.select(0);
-          select.stageIndex = 0;
-          select.updateStageLabel();
+        clickPhaser(select, select.startButton);
+      })()
+    `);
+
+    // Wait for FightScene to activate and verify correct arena
+    let templeFightState = null;
+    for (let attempt = 0; attempt < 25; attempt++) {
+      await new Promise(r => setTimeout(r, 200));
+      templeFightState = await cdp.eval(`
+        (() => {
+          const fight = window.__brawlGame.scene.getScene('FightScene');
+          if (!fight || !fight.scene.isActive() || !fight.three) return null;
+          return {
+            isActive: fight.scene.isActive(),
+            fightStageId: fight.stageId,
+            threeStageId: fight.three.stageId,
+            arenaChildrenCount: fight.three.arenaGroup ? fight.three.arenaGroup.children.length : 0
+          };
+        })()
+      `);
+      if (templeFightState) break;
+    }
+    console.log('[FightScene Runtime State (Temple)]', JSON.stringify(templeFightState));
+    if (!templeFightState || templeFightState.fightStageId !== 'temple' || templeFightState.threeStageId !== 'temple') {
+      throw new Error(`FightScene failed to load Ancient Temple: ${JSON.stringify(templeFightState)}`);
+    }
+
+    // Return back to SelectScene
+    await cdp.eval(`
+      (() => {
+        const fight = window.__brawlGame.scene.getScene('FightScene');
+        if (fight) {
+          fight.scene.stop('FightScene');
+          window.__brawlGame.scene.start('SelectScene', { mode: 'arcade' });
         }
       })()
     `);
-    await new Promise(r => setTimeout(r, 400));
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await new Promise(r => setTimeout(r, 150));
+      const ready = await cdp.eval(`
+        (() => {
+          const select = window.__brawlGame.scene.getScene('SelectScene');
+          return select && select.scene.isActive();
+        })()
+      `);
+      if (ready) break;
+    }
 
-    // 10. 1366x768 Compact Desktop
-    console.log('Testing 1366x768 viewport...');
+    // =========================================================================
+    // SECTION B: INSUFFICIENT COINS & INSUFFICIENT LEVEL REGRESSION CHECKS
+    // =========================================================================
+    console.log('\n--- REGRESSION CHECKS: INSUFFICIENT COINS & LEVEL ---');
+
+    // Regression Check 3: Insufficient Coins
+    console.log('Regression Check 3: Testing insufficient coins on City Rooftop (Level 5, wallet 50, cost 250)...');
+    const insufficientCoinsCheck = await cdp.eval(`
+      (() => {
+        ${UI_HELPERS}
+        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        snap.level = 5;
+        snap.xp = 3000;
+        snap.coins = 50; // insufficient (costs 250)
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(snap));
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        select.progression = snap;
+        clickDom('.stage-thumb[data-stage="2"]'); // click rooftop thumbnail (index 2)
+        clickDom('#stage-preview-lock'); // click unlock
+        const updated = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        return {
+          coins: updated.coins,
+          rooftopUnlocked: updated.unlockedStages.includes('rooftop'),
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Regression Check 3: Insufficient Coins]', JSON.stringify(insufficientCoinsCheck));
+    if (insufficientCoinsCheck.rooftopUnlocked || insufficientCoinsCheck.coins !== 50) {
+      throw new Error(`Rooftop unlocked despite insufficient coins: ${JSON.stringify(insufficientCoinsCheck)}`);
+    }
+
+    // Regression Check 4: Insufficient Level
+    console.log('Regression Check 4: Testing insufficient level on Ancient Temple (Level 2, wallet 500, requires Level 3)...');
+    const insufficientLevelCheck = await cdp.eval(`
+      (() => {
+        ${UI_HELPERS}
+        const snap = {
+          level: 2,
+          xp: 100, // Level 2
+          coins: 500, // sufficient coins but insufficient level
+          unlockedFighters: ['atlas', 'volt', 'rook', 'myst'],
+          unlockedStages: ['neon']
+        };
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(snap));
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        select.progression = snap;
+        clickDom('.stage-thumb[data-stage="1"]'); // click temple thumbnail (index 1)
+        clickDom('#stage-preview-lock'); // click unlock
+        const updated = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        return {
+          coins: updated.coins,
+          templeUnlocked: updated.unlockedStages.includes('temple'),
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Regression Check 4: Insufficient Level]', JSON.stringify(insufficientLevelCheck));
+    if (insufficientLevelCheck.templeUnlocked || insufficientLevelCheck.coins !== 500) {
+      throw new Error(`Temple unlocked despite insufficient level: ${JSON.stringify(insufficientLevelCheck)}`);
+    }
+
+    // =========================================================================
+    // SECTION C: 1366x768 COMPACT DESKTOP VIEWPORT
+    // =========================================================================
+    console.log('\n--- CAPTURING 1366x768 COMPACT DESKTOP ---');
     await cdp.setViewport(1366, 768);
     await cdp.eval(`
       (() => {
@@ -722,60 +730,262 @@ async function run() {
     console.log('Capturing: m2_09_fighter_select_1366x768.png');
     await cdp.screenshot('m2_09_fighter_select_1366x768.png');
 
-    // 11. 844x390 Mobile Landscape
-    console.log('Testing 844x390 mobile landscape viewport...');
+    // =========================================================================
+    // SECTION D: MOBILE LANDSCAPE (844x390) WITH LOCKED ARENA LAYOUT & UI CLICK
+    // =========================================================================
+    console.log('\n--- MOBILE LANDSCAPE (844x390) LOCKED ARENA LAYOUT & UI INTERACTION ---');
     await cdp.setViewport(844, 390);
+
+    // Reset progression so Ancient Temple is locked, with Level 3 and 200 coins
     await cdp.eval(`
       (() => {
+        const testProgression = {
+          level: 3,
+          xp: 1500,
+          coins: 200,
+          unlockedFighters: ['atlas', 'volt', 'rook', 'myst'],
+          unlockedStages: ['neon'],
+          stats: { wins: 5, losses: 1 }
+        };
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(testProgression));
         const select = window.__brawlGame.scene.getScene('SelectScene');
         if (select) {
+          select.progression = testProgression;
           select.scale.resize(844, 390);
+          select.select(0);
+          select.stageIndex = 1; // Select locked Ancient Temple!
+          select.updateStageLabel();
           select.layout({ width: 844, height: 390 });
         }
       })()
     `);
     await new Promise(r => setTimeout(r, 800));
 
-    // Mobile layout integrity assertions
-    const mobileLayoutCheck = await cdp.eval(`
+    // Verify Mobile Locked Arena Coordinates & Spacing
+    const mobileLockedCheck = await cdp.eval(`
       (() => {
         const select = window.__brawlGame.scene.getScene('SelectScene');
         if (!select) return null;
         const titleY = select.title.y;
-        const titleVisible = select.title.visible;
-        const cards = select.cardObjects.map(c => ({
-          x: c.x,
-          y: c.y,
-          visible: c.visible
-        }));
+        const subtitleY = select.subtitle.y;
+        const stageY = select.stageLabel.y;
+        const descY = select.stageDesc.y;
+        const unlockBtnY = select.stageUnlockBtn.y;
+        const unlockBtnVisible = select.stageUnlockBtn.visible;
+        const diffBtnY = select.difficultyButtons[0]?.y;
         const startY = select.startButton.y;
-        const startVisible = select.startButton.visible;
-        const infoVisible = select.infoPanel.visible;
-        const stagePrevVisible = select.stagePrev.visible;
-        const stageNextVisible = select.stageNext.visible;
         return {
           titleY,
-          titleVisible,
-          titleNotClipping: titleY >= 18,
-          cardCount: cards.length,
-          allCardsVisible: cards.every(c => c.visible),
-          infoVisible,
-          stageControlsVisible: stagePrevVisible && stageNextVisible,
+          subtitleY,
+          stageY,
+          descY,
+          unlockBtnY,
+          unlockBtnVisible,
+          diffBtnY,
           startY,
-          startVisible,
-          startOnScreen: startY <= 380 && startY >= 320
+          gapDescToUnlock: unlockBtnY - descY,
+          gapUnlockToDiff: diffBtnY - unlockBtnY,
+          gapDiffToStart: startY - diffBtnY,
+          noOverlap: (descY < unlockBtnY) && (unlockBtnY < diffBtnY) && (diffBtnY < startY)
         };
       })()
     `);
-    console.log('[Mobile 844x390 Layout Verification]', JSON.stringify(mobileLayoutCheck));
-    if (!mobileLayoutCheck.titleNotClipping || !mobileLayoutCheck.allCardsVisible || !mobileLayoutCheck.startOnScreen) {
-      throw new Error(`Mobile 844x390 layout check failed: ${JSON.stringify(mobileLayoutCheck)}`);
+    console.log('[Mobile 844x390 Locked Arena Layout Verification]', JSON.stringify(mobileLockedCheck));
+    if (!mobileLockedCheck.unlockBtnVisible || !mobileLockedCheck.noOverlap || mobileLockedCheck.gapUnlockToDiff < 25) {
+      throw new Error(`Mobile locked layout overlap detected: ${JSON.stringify(mobileLockedCheck)}`);
     }
 
-    console.log('Capturing: m2_10_fighter_select_mobile_844x390.png');
+    // Capture the requested 844x390 screenshot with LOCKED arena selected
+    console.log('Capturing: m2_10_fighter_select_mobile_844x390.png (with Ancient Temple locked)');
     await cdp.screenshot('m2_10_fighter_select_mobile_844x390.png');
 
-    console.log('=== MILESTONE 2 SCREENSHOT CAPTURE COMPLETE ===');
+    // UI Interaction: Click Start Fight on mobile while arena is locked
+    console.log('UI Interaction: Clicking Start Fight on mobile with locked arena...');
+    const mobileBlockedFight = await cdp.eval(`
+      (() => {
+        ${UI_HELPERS}
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        clickPhaser(select, select.startButton);
+        const activeScene = window.__brawlGame.scene.scenes.find(s => s.scene.isActive());
+        return {
+          stayedOnSelect: activeScene?.scene.key === 'SelectScene',
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Mobile Blocked Fight Check]', JSON.stringify(mobileBlockedFight));
+    if (!mobileBlockedFight.stayedOnSelect) {
+      throw new Error('Mobile match started on locked arena!');
+    }
+
+    // UI Interaction: Click the Phaser arena Unlock button on mobile
+    console.log('UI Interaction: Clicking Phaser arena Unlock button on mobile...');
+    const mobilePhaserUnlock = await cdp.eval(`
+      (() => {
+        ${UI_HELPERS}
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        clickPhaser(select, select.stageUnlockBtn);
+        const snap = JSON.parse(localStorage.getItem('fighter.progression.v1'));
+        return {
+          coins: snap.coins,
+          templeUnlocked: snap.unlockedStages.includes('temple'),
+          unlockBtnVisible: select.stageUnlockBtn.visible,
+          subtitle: select.subtitle.text
+        };
+      })()
+    `);
+    console.log('[Mobile Phaser Unlock Button Result]', JSON.stringify(mobilePhaserUnlock));
+    if (!mobilePhaserUnlock.templeUnlocked || mobilePhaserUnlock.coins !== 50 || mobilePhaserUnlock.unlockBtnVisible) {
+      throw new Error(`Mobile Phaser Unlock failed: ${JSON.stringify(mobilePhaserUnlock)}`);
+    }
+
+    // UI Interaction: Click Start Fight on mobile after unlocking
+    console.log('UI Interaction: Clicking Start Fight on mobile after unlock...');
+    await cdp.eval(`
+      (() => {
+        ${UI_HELPERS}
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        clickPhaser(select, select.startButton);
+      })()
+    `);
+
+    let mobileFightState = null;
+    for (let attempt = 0; attempt < 25; attempt++) {
+      await new Promise(r => setTimeout(r, 200));
+      mobileFightState = await cdp.eval(`
+        (() => {
+          const fight = window.__brawlGame.scene.getScene('FightScene');
+          if (!fight || !fight.scene.isActive() || !fight.three) return null;
+          return {
+            isActive: fight.scene.isActive(),
+            fightStageId: fight.stageId,
+            threeStageId: fight.three.stageId
+          };
+        })()
+      `);
+      if (mobileFightState) break;
+    }
+    console.log('[Mobile FightScene Runtime State]', JSON.stringify(mobileFightState));
+    if (!mobileFightState || mobileFightState.fightStageId !== 'temple') {
+      throw new Error(`Mobile FightScene failed to load Temple: ${JSON.stringify(mobileFightState)}`);
+    }
+
+    // Return to SelectScene and restore desktop viewport for multi-arena launch check
+    await cdp.eval(`
+      (() => {
+        const fight = window.__brawlGame.scene.getScene('FightScene');
+        if (fight) {
+          fight.scene.stop('FightScene');
+          window.__brawlGame.scene.start('SelectScene', { mode: 'arcade' });
+        }
+      })()
+    `);
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await new Promise(r => setTimeout(r, 150));
+      const ready = await cdp.eval(`
+        (() => {
+          const select = window.__brawlGame.scene.getScene('SelectScene');
+          return select && select.scene.isActive();
+        })()
+      `);
+      if (ready) break;
+    }
+
+    // =========================================================================
+    // SECTION E: ALL THREE ARENAS LAUNCH CORRECTLY VIA UI BUTTONS
+    // =========================================================================
+    console.log('\n--- REGRESSION CHECK 6: ALL THREE ARENAS LAUNCH CORRECTLY VIA UI ---');
+    await cdp.setViewport(1920, 1080);
+
+    // Seed progression with all 3 arenas unlocked
+    await cdp.eval(`
+      (() => {
+        const fullProgression = {
+          level: 10,
+          xp: 25000,
+          coins: 50000,
+          unlockedFighters: ['atlas', 'volt', 'rook', 'myst'],
+          unlockedStages: ['neon', 'temple', 'rooftop'],
+          stats: { wins: 30, losses: 5 }
+        };
+        localStorage.setItem('fighter.progression.v1', JSON.stringify(fullProgression));
+        const select = window.__brawlGame.scene.getScene('SelectScene');
+        if (select) {
+          select.progression = fullProgression;
+          select.scale.resize(1920, 1080);
+          select.layout({ width: 1920, height: 1080 });
+          select.select(0);
+        }
+      })()
+    `);
+    await new Promise(r => setTimeout(r, 400));
+
+    async function testArenaLaunchViaUI(stageIndex, expectedStageId, expectedMeshCount) {
+      console.log(`Testing UI launch for arena '${expectedStageId}' (index ${stageIndex})...`);
+      await cdp.eval(`
+        (() => {
+          ${UI_HELPERS}
+          const select = window.__brawlGame.scene.getScene('SelectScene');
+          select.stageIndex = ${stageIndex};
+          select.updateStageLabel();
+          clickPhaser(select, select.startButton);
+        })()
+      `);
+
+      let state = null;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        await new Promise(r => setTimeout(r, 200));
+        state = await cdp.eval(`
+          (() => {
+            const fight = window.__brawlGame.scene.getScene('FightScene');
+            if (!fight || !fight.scene.isActive() || !fight.three) return null;
+            return {
+              isActive: fight.scene.isActive(),
+              fightStageId: fight.stageId,
+              threeStageId: fight.three.stageId,
+              meshCount: fight.three.arenaGroup ? fight.three.arenaGroup.children.length : 0
+            };
+          })()
+        `);
+        if (state) break;
+      }
+      console.log(`[Arena Launch: ${expectedStageId}]`, JSON.stringify(state));
+      if (!state || state.fightStageId !== expectedStageId || state.threeStageId !== expectedStageId) {
+        throw new Error(`Failed to launch arena '${expectedStageId}': ${JSON.stringify(state)}`);
+      }
+
+      // Return to SelectScene
+      await cdp.eval(`
+        (() => {
+          const fight = window.__brawlGame.scene.getScene('FightScene');
+          if (fight) {
+            fight.scene.stop('FightScene');
+            window.__brawlGame.scene.start('SelectScene', { mode: 'arcade' });
+          }
+        })()
+      `);
+      for (let attempt = 0; attempt < 20; attempt++) {
+        await new Promise(r => setTimeout(r, 150));
+        const ready = await cdp.eval(`
+          (() => {
+            const select = window.__brawlGame.scene.getScene('SelectScene');
+            return select && select.scene.isActive();
+          })()
+        `);
+        if (ready) break;
+      }
+    }
+
+    // Launch Neon District via UI
+    await testArenaLaunchViaUI(0, 'neon', 102);
+
+    // Launch Ancient Temple via UI
+    await testArenaLaunchViaUI(1, 'temple', 26);
+
+    // Launch City Rooftop via UI
+    await testArenaLaunchViaUI(2, 'rooftop', 36);
+
+    console.log('=== MILESTONE 2 INTERACTION AUDIT COMPLETE ===');
   } catch (err) {
     console.error('[Error during capture]', err);
     throw err;

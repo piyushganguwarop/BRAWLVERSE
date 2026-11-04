@@ -103,6 +103,8 @@ export class SelectScene extends Phaser.Scene {
       backgroundColor: '#f4c65e',
       padding: { x: 12, y: 4 }
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
+    this.stageUnlockBtn.on('pointerover', () => { this.stageUnlockBtn.setBackgroundColor('#ffd980'); });
+    this.stageUnlockBtn.on('pointerout', () => { this.stageUnlockBtn.setBackgroundColor('#f4c65e'); });
     this.stageUnlockBtn.on('pointerdown', () => this.unlockCurrentStage());
 
     // Primary Start Fight Button
@@ -652,9 +654,9 @@ export class SelectScene extends Phaser.Scene {
     const gap = isMobileShort ? 8 : (compact ? 6 : 14);
     const toolbarHeight = isMobileShort ? 160 : (this.localVersus ? 236 : 200);
     const toolbarTop = height - toolbarHeight;
-    const startY = isMobileShort ? 90 : (compact ? 70 : 180);
-    const cardAreaBottom = isMobileShort ? 136 : (toolbarTop - (desktopSplit ? 18 : 104));
-    const cardH = isMobileShort ? 92 : Math.max(56, Math.min(compact ? 150 : 190, (cardAreaBottom - startY - gap) / rows));
+    const startY = isMobileShort ? 86 : (compact ? 70 : 180);
+    const cardAreaBottom = isMobileShort ? 130 : (toolbarTop - (desktopSplit ? 18 : 104));
+    const cardH = isMobileShort ? 86 : Math.max(56, Math.min(compact ? 150 : 190, (cardAreaBottom - startY - gap) / rows));
     const cardW = isMobileShort ? Math.max(72, Math.min(92, Math.floor((width - 48 - (columns - 1) * gap) / columns))) : Math.max(55, Math.min(compact ? 118 : 150, (width - (desktopSplit ? 48 : 28) - (columns - 1) * gap) / columns));
     const totalW = columns * cardW + (columns - 1) * gap;
     const contentLeft = (width - totalW) / 2;
@@ -667,16 +669,16 @@ export class SelectScene extends Phaser.Scene {
     const cardsBottom = isMobileShort ? (startY + cardH / 2) : (startY + rows * (cardH + gap) - gap);
 
     const infoWidth = isMobileShort ? Math.min(width - 32, 620) : (desktopSplit ? 300 : Math.max(250, width - 32));
-    const infoHeight = isMobileShort ? 44 : (desktopSplit ? Math.min(220, Math.max(160, toolbarTop - startY - 20)) : Math.min(82, Math.max(64, toolbarTop - cardsBottom - 10)));
+    const infoHeight = isMobileShort ? 36 : (desktopSplit ? Math.min(220, Math.max(160, toolbarTop - startY - 20)) : Math.min(82, Math.max(64, toolbarTop - cardsBottom - 10)));
     const infoX = isMobileShort ? (width / 2) : (desktopSplit ? contentLeft + totalW + 24 + infoWidth / 2 : width / 2);
-    const infoY = isMobileShort ? 168 : (desktopSplit ? startY + Math.min(112, (toolbarTop - startY) / 2) : cardsBottom + infoHeight / 2 + 6);
+    const infoY = isMobileShort ? 154 : (desktopSplit ? startY + Math.min(112, (toolbarTop - startY) / 2) : cardsBottom + infoHeight / 2 + 6);
     this.infoBg.setSize(infoWidth, infoHeight);
 
     if (isMobileShort) {
-      this.infoName.setPosition(-infoWidth / 2 + 14, -7).setFontSize('13px').setOrigin(0, 0.5);
-      this.infoTitle.setPosition(-infoWidth / 2 + 14, 9).setFontSize('8px').setOrigin(0, 0.5);
-      this.specialLabel.setPosition(infoWidth / 2 - 14, -7).setFontSize('9px').setOrigin(1, 0.5);
-      this.infoBio.setPosition(infoWidth / 2 - 14, 9).setFontSize('8px').setOrigin(1, 0.5).setWordWrapWidth(infoWidth / 2).setMaxLines(1);
+      this.infoName.setPosition(-infoWidth / 2 + 14, -6).setFontSize('13px').setOrigin(0, 0.5);
+      this.infoTitle.setPosition(-infoWidth / 2 + 14, 8).setFontSize('8px').setOrigin(0, 0.5);
+      this.specialLabel.setPosition(infoWidth / 2 - 14, -6).setFontSize('9px').setOrigin(1, 0.5);
+      this.infoBio.setPosition(infoWidth / 2 - 14, 8).setFontSize('8px').setOrigin(1, 0.5).setWordWrapWidth(infoWidth / 2).setMaxLines(1);
     } else if (desktopSplit) {
       this.infoName.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 16).setOrigin(0, 0);
       this.infoTitle.setPosition(-infoWidth / 2 + 16, -infoHeight / 2 + 48).setOrigin(0, 0);
@@ -691,7 +693,7 @@ export class SelectScene extends Phaser.Scene {
     this.infoPanel.setPosition(infoX, infoY).setScale(1);
     this.infoPanel.setVisible(isMobileShort || (!sidePreviewsActive && infoHeight >= 60));
 
-    const stageY = isMobileShort ? 224 : toolbarTop + 18;
+    const stageY = isMobileShort ? 198 : toolbarTop + 18;
     if (this.selectionPreviewHost) {
       if (width >= 1500) {
         this.selectionPreviewHost.style.right = '32px';
@@ -718,14 +720,14 @@ export class SelectScene extends Phaser.Scene {
     }
 
     this.stageLabel.setPosition(width / 2, stageY).setFontSize(isMobileShort ? '13px' : '15px').setVisible(isMobileShort || !sidePreviewsActive);
-    this.stageDesc.setPosition(width / 2, stageY + 16).setFontSize(isMobileShort ? '9px' : '11px').setVisible(isMobileShort || (!sidePreviewsActive && !isMobileShort));
+    this.stageDesc.setPosition(width / 2, isMobileShort ? stageY + 16 : stageY + 16).setFontSize(isMobileShort ? '9px' : '11px').setVisible(isMobileShort || (!sidePreviewsActive && !isMobileShort));
     this.stagePrev.setPosition(width / 2 - (isMobileShort ? 145 : (compact ? 120 : 165)), stageY + (isMobileShort ? 0 : 4)).setScale(isMobileShort ? 0.8 : (compact ? 0.7 : 1)).setVisible(isMobileShort || !sidePreviewsActive);
     this.stageNext.setPosition(width / 2 + (isMobileShort ? 145 : (compact ? 120 : 165)), stageY + (isMobileShort ? 0 : 4)).setScale(isMobileShort ? 0.8 : (compact ? 0.7 : 1)).setVisible(isMobileShort || !sidePreviewsActive);
 
     if (this.stageUnlockBtn) {
       const stageBtnY = isMobileShort ? 244 : stageY + 34;
       this.stageUnlockBtn.setPosition(width / 2, stageBtnY)
-        .setScale(isMobileShort ? 0.8 : (compact ? 0.8 : 1))
+        .setScale(isMobileShort ? 0.82 : (compact ? 0.8 : 1))
         .setVisible((isMobileShort || !sidePreviewsActive) && !isStageUnlocked(this.stages[this.stageIndex].id));
     }
 
@@ -733,7 +735,7 @@ export class SelectScene extends Phaser.Scene {
     this.difficultyLabel?.setVisible(isCpuMode && !isMobileShort);
     this.difficultyButtons?.forEach(button => button.setVisible(isCpuMode));
     if (isCpuMode) {
-      const diffY = isMobileShort ? 266 : (sidePreviewsActive ? cardsBottom + 35 : stageY + 38);
+      const diffY = isMobileShort ? 284 : (sidePreviewsActive ? cardsBottom + 35 : stageY + 38);
       this.difficultyLabel?.setPosition(width / 2, diffY);
       this.difficultyButtons?.forEach((button, i) => button.setPosition(width / 2 + (i - 1) * (isMobileShort ? 78 : 90), isMobileShort ? diffY : diffY + 24).setScale(isMobileShort ? 0.76 : 1));
     }
